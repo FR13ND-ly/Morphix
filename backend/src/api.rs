@@ -21,12 +21,50 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/simulations/validate", post(validate_simulation))
         .route("/simulations/run", post(run_simulation))
+        .route("/simulations/examples/{name}", get(get_example))
         .route("/simulations/{id}", get(get_simulation))
         .route(
             "/simulations/{id}/generations/{generation}",
             get(get_generation),
         )
         .layer(DefaultBodyLimit::max(256 * 1024))
+}
+
+async fn get_example(
+    Path(name): Path<String>,
+) -> Result<Json<SimulationRequest>, (StatusCode, Json<ErrorResponse>)> {
+    let source = match name.as_str() {
+        "game-of-life" => include_str!("../examples/game-of-life.json"),
+        "forest-fire" => include_str!("../examples/forest-fire.json"),
+        "diffusion" => include_str!("../examples/diffusion.json"),
+        "artificial-ecosystem" => include_str!("../examples/artificial-ecosystem.json"),
+        "rule-30" => include_str!("../examples/rule-30.json"),
+        "brians-brain" => include_str!("../examples/brians-brain.json"),
+        "cyclic" => include_str!("../examples/cyclic.json"),
+        "langtons-ant" => include_str!("../examples/langtons-ant.json"),
+        "sandpile" => include_str!("../examples/sandpile.json"),
+        "traffic" => include_str!("../examples/traffic.json"),
+        "predator-prey" => include_str!("../examples/predator-prey.json"),
+        "epidemic" => include_str!("../examples/epidemic.json"),
+        "schelling" => include_str!("../examples/schelling.json"),
+        "voter" => include_str!("../examples/voter.json"),
+        "crystal-growth" => include_str!("../examples/crystal-growth.json"),
+        "falling-sand" => include_str!("../examples/falling-sand.json"),
+        "moving-agents" => include_str!("../examples/moving-agents.json"),
+        _ => {
+            return Err(error_response(
+                StatusCode::NOT_FOUND,
+                "Example not found".to_owned(),
+            ));
+        }
+    };
+    let request = serde_json::from_str(source).map_err(|_| {
+        error_response(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Example could not be loaded".to_owned(),
+        )
+    })?;
+    Ok(Json(request))
 }
 
 async fn validate_simulation(

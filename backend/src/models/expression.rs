@@ -134,11 +134,15 @@ impl Expression {
                         offset.0, offset.1
                     )
                 })?,
-            Self::CountNeighbors { type_id } => neighbors
-                .cells
-                .iter()
-                .filter(|neighbor| neighbor.type_id == *type_id)
-                .count() as f64,
+            Self::CountNeighbors { type_id } => {
+                let mut count = 0;
+                for neighbor in &neighbors.cells {
+                    if neighbor.type_id == *type_id {
+                        count += 1;
+                    }
+                }
+                count as f64
+            }
             Self::SumNeighbors { property } => {
                 let mut sum = 0.0;
 
@@ -151,18 +155,21 @@ impl Expression {
 
                 sum
             }
-            Self::CountNeighborAgents { type_id } => neighbors
-                .agents
-                .iter()
-                .filter(|agent| agent.state.type_id == *type_id)
-                .count() as f64,
+            Self::CountNeighborAgents { type_id } => {
+                let mut count = 0;
+                for agent in &neighbors.agents {
+                    if agent.state.type_id == *type_id {
+                        count += 1;
+                    }
+                }
+                count as f64
+            }
             Self::SumNeighborAgents { type_id, property } => {
                 let mut sum = 0.0;
-                for agent in neighbors
-                    .agents
-                    .iter()
-                    .filter(|agent| agent.state.type_id == *type_id)
-                {
+                for agent in &neighbors.agents {
+                    if agent.state.type_id != *type_id {
+                        continue;
+                    }
                     let value = agent.state.properties.get(property).ok_or_else(|| {
                         format!(
                             "Neighbor agent {} is missing property '{property}'",

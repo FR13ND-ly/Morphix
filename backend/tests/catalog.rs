@@ -115,6 +115,23 @@ async fn every_example_runs_through_the_api_and_round_trips_configuration_and_hi
     let pool = db::connect("sqlite::memory:").await.unwrap();
     let app = api::router().with_state(AppState { db: pool.clone() });
     for (name, source) in EXAMPLES {
+        let example = app
+            .clone()
+            .oneshot(
+                Request::get(format!("/simulations/examples/{name}"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(example.status(), StatusCode::OK);
+        let body = to_bytes(example.into_body(), 2 * 1024 * 1024)
+            .await
+            .unwrap();
+        assert_eq!(
+            serde_json::from_slice::<Value>(&body).unwrap(),
+            serde_json::to_value(request(name)).unwrap()
+        );
         let validation = app
             .clone()
             .oneshot(
@@ -185,6 +202,27 @@ async fn every_example_runs_through_the_api_and_round_trips_configuration_and_hi
             "{name}"
         );
     }
+    pool.close().await;
+}
+
+#[tokio::test]
+async fn unknown_example_returns_a_json_not_found_error() {
+    let pool = db::connect("sqlite::memory:").await.unwrap();
+    let app = api::router().with_state(AppState { db: pool.clone() });
+    let response = app
+        .oneshot(
+            Request::get("/simulations/examples/missing")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    let body = to_bytes(response.into_body(), 1024).await.unwrap();
+    assert_eq!(
+        serde_json::from_slice::<Value>(&body).unwrap(),
+        json!({"error":"Example not found"})
+    );
     pool.close().await;
 }
 

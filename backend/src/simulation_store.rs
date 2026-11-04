@@ -54,7 +54,10 @@ pub async fn get(pool: &SqlitePool, id: i64) -> Result<Option<StoredSimulation>,
     .bind(id)
     .fetch_all(pool)
     .await?;
-    let history = rows.iter().map(read_generation).collect::<Result<_, _>>()?;
+    let mut history = Vec::new();
+    for row in &rows {
+        history.push(read_generation(row)?);
+    }
 
     Ok(Some(StoredSimulation {
         id,
@@ -69,17 +72,18 @@ pub async fn get_generation(
     id: i64,
     generation: i64,
 ) -> Result<Option<SimulationGeneration>, sqlx::Error> {
-    sqlx::query(
+    let row = sqlx::query(
         "SELECT generation, world_json FROM simulation_generations \
          WHERE simulation_id = ? AND generation = ?",
     )
     .bind(id)
     .bind(generation)
     .fetch_optional(pool)
-    .await?
-    .as_ref()
-    .map(read_generation)
-    .transpose()
+    .await?;
+    match row {
+        Some(row) => Ok(Some(read_generation(&row)?)),
+        None => Ok(None),
+    }
 }
 
 fn read_generation(row: &sqlx::sqlite::SqliteRow) -> Result<SimulationGeneration, sqlx::Error> {

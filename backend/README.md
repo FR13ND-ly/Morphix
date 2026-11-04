@@ -27,6 +27,9 @@ Alegerea celulelor libere, pregătirea nașterilor și verificarea limitelor
 istoricului sunt scrise cu bucle și condiții explicite. Cele 335 de teste existente
 verifică în continuare comportamentul și contractul JSON.
 
+Numărarea vecinilor și citirea generațiilor din SQLite folosesc de asemenea bucle
+și ramuri explicite, pentru a putea urmări ușor fiecare operație.
+
 Pentru compararea implementărilor, din rădăcina proiectului:
 
 ```powershell
@@ -97,6 +100,9 @@ rămân componente separate ale aplicației.
 ## Endpoint-uri
 
 - `GET /health`: verifică legătura cu baza de date; răspunde cu `ok` sau HTTP 503.
+- `GET /simulations/examples/{name}`: întoarce configurația completă a unui exemplu,
+  de exemplu `game-of-life`, `diffusion` sau `sandpile`. Numele necunoscute produc
+  HTTP 404. Frontend-ul folosește fișierele originale prin acest endpoint.
 - `POST /simulations/validate`: verifică o cerere înainte de rulare și răspunde cu
   `{ "valid": true }`. Nu calculează generații și nu salvează în SQLite.
 - `POST /simulations/run`: primește JSON cu `automaton`, `initial_world`, `generations`
