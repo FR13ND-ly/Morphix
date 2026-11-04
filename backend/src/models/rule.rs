@@ -2,7 +2,7 @@ use rand::{Rng, RngExt};
 use serde::{Deserialize, Deserializer, Serialize};
 
 use super::{
-    action::{Action, ActionResult, apply_actions},
+    action::{Action, ActionResult, apply_actions_validated},
     automaton::AutomatonDefinition,
     condition::Condition,
     expression::Expression,
@@ -177,7 +177,18 @@ pub fn apply_rules(
 ) -> Result<ActionResult, String> {
     automaton.validate()?;
     automaton.validate_object_state(current)?;
+    apply_rules_validated(target, current, cell, neighbors, automaton, rng)
+}
 
+// Used after entry-point validation, so the rules are not revalidated per object.
+pub(crate) fn apply_rules_validated(
+    target: RuleTarget,
+    current: &ObjectState,
+    cell: &ObjectState,
+    neighbors: &Neighbors<'_>,
+    automaton: &AutomatonDefinition,
+    rng: &mut impl Rng,
+) -> Result<ActionResult, String> {
     for (index, rule) in automaton.rules.iter().enumerate() {
         if rule.target != target {
             continue;
@@ -202,7 +213,7 @@ pub fn apply_rules(
             break;
         }
 
-        return apply_actions(&rule.actions, current, cell, neighbors, automaton, rng)
+        return apply_actions_validated(&rule.actions, current, cell, neighbors, automaton, rng)
             .map_err(|error| format!("Rule {index}: {error}"));
     }
 

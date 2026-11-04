@@ -23,32 +23,38 @@ pub struct Neighbors<'a> {
 
 impl<'a> Neighbors<'a> {
     pub fn position_at_offset(&self, offset: (i32, i32)) -> Option<Position> {
-        self.offsets
-            .iter()
-            .position(|candidate| *candidate == offset)
-            .and_then(|index| self.positions.get(index).copied().flatten())
+        for (index, candidate) in self.offsets.iter().enumerate() {
+            if *candidate == offset {
+                return self.positions.get(index).copied().flatten();
+            }
+        }
+        None
     }
 
     pub fn is_free_offset(&self, offset: (i32, i32)) -> bool {
-        self.free_offsets.contains(&offset)
-            || self.position_at_offset(offset).is_some_and(|position| {
-                self.free_offsets
-                    .iter()
-                    .any(|free| self.position_at_offset(*free) == Some(position))
-            })
+        if self.free_offsets.contains(&offset) {
+            return true;
+        }
+        if let Some(position) = self.position_at_offset(offset) {
+            for free in &self.free_offsets {
+                if self.position_at_offset(*free) == Some(position) {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     pub fn cell_at_offset(&self, offset: (i32, i32)) -> Result<&'a ObjectState, String> {
-        self.offsets
-            .iter()
-            .zip(&self.cells)
-            .find_map(|(candidate, state)| (*candidate == offset).then_some(*state))
-            .ok_or_else(|| {
-                format!(
-                    "No cell was read at neighbor offset ({}, {})",
-                    offset.0, offset.1
-                )
-            })
+        for (candidate, state) in self.offsets.iter().zip(&self.cells) {
+            if *candidate == offset {
+                return Ok(*state);
+            }
+        }
+        Err(format!(
+            "No cell was read at neighbor offset ({}, {})",
+            offset.0, offset.1
+        ))
     }
 }
 
@@ -91,7 +97,16 @@ impl Neighborhood {
         if position.row >= world.height() || position.col >= world.width() {
             return Err("Current position is outside the world".to_owned());
         }
+        Ok(self.read_validated(world, position, boundary))
+    }
 
+    // Call only for a validated world and a position inside that world.
+    pub(crate) fn read_validated<'a>(
+        &self,
+        world: &'a World,
+        position: Position,
+        boundary: &'a Boundary,
+    ) -> Neighbors<'a> {
         let height = world.height() as i64;
         let width = world.width() as i64;
         let mut neighbors = Vec::with_capacity(self.offsets.len());
@@ -136,7 +151,7 @@ impl Neighborhood {
             positions.push(target);
         }
 
-        Ok(Neighbors {
+        Neighbors {
             offsets: self.offsets.clone(),
             free_offsets,
             cells: neighbors,
@@ -146,6 +161,6 @@ impl Neighborhood {
                 .iter()
                 .filter(|agent| agent_positions.contains(&agent.position))
                 .collect(),
-        })
+        }
     }
 }

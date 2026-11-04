@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use backend::models::{
-    action::{Action, NeighborSelection, apply_actions},
+    action::{Action, Movement, NeighborSelection, apply_actions},
     agent::Agent,
     automaton::{AutomatonDefinition, Boundary},
     condition::{Comparison, Condition},
@@ -220,7 +220,7 @@ fn chooses_the_first_free_neighbor_matching_the_optional_cell_type() {
             &mut StdRng::seed_from_u64(42),
         )
         .unwrap();
-        assert_eq!(result.movement, Some(expected));
+        assert_eq!(result.movement, Some(Movement::Offset(expected)));
         assert_eq!(result.state.properties, current.properties);
     }
 }
@@ -265,11 +265,14 @@ fn random_free_neighbor_choices_replay_with_the_same_rng_seed() {
         )
         .unwrap();
         assert_eq!(result.movement, replay.movement);
-        assert!(matches!(result.movement, Some((0, -1)) | Some((0, 1))));
+        assert!(matches!(
+            result.movement,
+            Some(Movement::Offset((0, -1))) | Some(Movement::Offset((0, 1)))
+        ));
         choices.push(result.movement);
     }
-    assert!(choices.contains(&Some((0, -1))));
-    assert!(choices.contains(&Some((0, 1))));
+    assert!(choices.contains(&Some(Movement::Offset((0, -1)))));
+    assert!(choices.contains(&Some(Movement::Offset((0, 1)))));
 }
 
 #[test]
@@ -921,7 +924,7 @@ fn actions_read_the_original_cell_for_state_movement_and_spawn_expressions() {
 
     assert_eq!(result.state.type_id, 0);
     assert_eq!(result.state.properties["value"], 5.0);
-    assert_eq!(result.movement, Some((0, 4)));
+    assert_eq!(result.movement, Some(Movement::Offset((0, 4))));
     let spawn = result.spawn.unwrap();
     assert_eq!(spawn.offset, (0, 4));
     assert_eq!(spawn.state.properties["energy"], 16.0);
@@ -1243,7 +1246,7 @@ fn agent_observations_reach_state_movement_spawn_and_cell_update_expressions() {
     .unwrap();
 
     assert_eq!(result.state.properties["energy"], 22.0);
-    assert_eq!(result.movement, Some((0, 2)));
+    assert_eq!(result.movement, Some(Movement::Offset((0, 2))));
     let spawn = result.spawn.unwrap();
     assert_eq!(spawn.offset, (0, 2));
     assert_eq!(spawn.state.properties["energy"], 10.0);

@@ -156,12 +156,10 @@ fn default_save_history() -> bool {
 }
 
 pub(crate) fn world_history_units(world: &World, max_properties: usize) -> Option<usize> {
-    let objects = world
-        .cells
-        .iter()
-        .try_fold(world.agents.len(), |count, row| {
-            count.checked_add(row.len())
-        })?;
+    let mut objects = world.agents.len();
+    for row in &world.cells {
+        objects = objects.checked_add(row.len())?;
+    }
     objects.checked_mul(max_properties.checked_add(1)?)
 }
 

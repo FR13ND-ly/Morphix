@@ -3,6 +3,36 @@
 Din directorul `backend`, pornește serverul cu `cargo run`. Adresa implicită este
 `http://127.0.0.1:3000`; configurația se citește din variabilele de mediu și `.env`.
 
+## Variantele implementării
+
+- `codex/advanced-simulator` păstrează versiunea completă dinaintea simplificării,
+  în commit-ul `212a45b`.
+- `main` păstrează aceleași configurații JSON, modele și endpoint-uri, cu un flux
+  intern mai ușor de urmărit.
+
+Pe `main`, intenția de mișcare are un singur câmp, `Option<Movement>`, cu variantele
+`Offset`, `FreeCell` și `RemovedNeighbor`. Simulatorul păstrează agentul, rezultatul
+regulii și destinația într-un `AgentDecision`, definit în `src/simulator.rs`.
+Rezolvarea capturilor și a deplasărilor parcurge această listă de decizii.
+
+Definiția automatului și lumea inițială sunt validate la intrarea în `run()` sau
+`step()`. În timpul unei rulări, simulatorul folosește funcțiile interne
+`read_validated()`, `apply_rules_validated()` și `apply_actions_validated()` pentru
+datele deja verificate. Valorile produse de acțiuni sunt verificate în continuare,
+iar fiecare lume rezultată este verificată structural: grilă, poziții și ID-uri.
+Funcțiile publice `read()`, `apply_rules()` și `apply_actions()` își păstrează
+verificările de intrare pentru utilizarea lor independentă.
+
+Alegerea celulelor libere, pregătirea nașterilor și verificarea limitelor
+istoricului sunt scrise cu bucle și condiții explicite. Cele 335 de teste existente
+verifică în continuare comportamentul și contractul JSON.
+
+Pentru compararea implementărilor, din rădăcina proiectului:
+
+```powershell
+git diff codex/advanced-simulator..main -- backend/src
+```
+
 ## Stadiul simulatorului și catalogul de modele
 
 Motorul execută configurații pentru toate cele 15 familii din enunț. Tabelul
@@ -746,13 +776,14 @@ Politica de conflict este deterministă; agenții care cer aceeași poziție nu 
 în funcție de ordinea din listă. Alegerile probabilistice folosesc în continuare ordinea
 agenților și generatorul inițializat cu seed-ul cererii.
 
-`apply_actions()` și `apply_rules()` întorc acum un `ActionResult`: `state` conține
-starea nouă, `movement` conține offset-ul solicitat, `remove_agent` arată dacă agentul
+`apply_actions()` și `apply_rules()` întorc un `ActionResult`: `state` conține
+starea nouă, `movement` conține eventuala intenție de mișcare, `remove_agent` arată dacă agentul
 trebuie eliminat, `neighbor_to_remove` conține ID-ul agentului vecin ales pentru
 eliminare, `spawn` conține eventuala cerere de creare a unui agent, iar
 `cell_update` conține modificarea cerută pentru celula agentului.
-`free_cell_move` cere selectarea unui loc liber din întreaga grilă,
-`move_to_removed_neighbor` cere intrarea în poziția țintei capturate, iar
+`Movement::Offset` conține offset-ul explicit sau ales din vecinătate,
+`Movement::FreeCell` cere alegerea unei celule libere din întreaga grilă, iar
+`Movement::RemovedNeighbor` cere intrarea în poziția țintei capturate.
 `neighbor_updates` conține contribuțiile numerice ale unei reguli de celulă.
 Acest rezultat este temporar; nu este un câmp
 salvat în `ObjectState`, `Agent` sau în JSON-ul lumii.
@@ -806,7 +837,7 @@ eligibilă pentru această alegere începând cu generația următoare. Filtrul 
 citește tot starea de la începutul pasului. El verifică celula destinației, fără
 verificări asupra traseului dintre origine și destinație.
 
-După alegere, `ActionResult.movement` conține offset-ul ales. Simulatorul aplică
+După alegere, `ActionResult.movement` conține `Some(Movement::Offset(offset))`. Simulatorul aplică
 aceeași rezolvare a conflictelor ca pentru `Move`: două cereri spre aceeași poziție
 se anulează. Nu se face o nouă alegere după un conflict. Dacă nu există niciun vecin
 eligibil, agentul rămâne pe loc; celelalte acțiuni din regulă se păstrează și nu se
@@ -852,7 +883,7 @@ Selecția citește terenul și ocuparea de la începutul pasului, folosind RNG-u
 imediat după evaluarea regulii agentului. Destinațiile sunt rezolvate ulterior
 împreună cu celelalte deplasări. Cererile către aceeași poziție se anulează, fără
 o nouă alegere. Fără destinații, agentul rămâne pe loc și păstrează celelalte
-efecte ale regulii. `apply_actions()` întoarce cererea temporară `free_cell_move`;
+efecte ale regulii. `apply_actions()` întoarce `Some(Movement::FreeCell { ... })`;
 simulatorul are acces la întreaga lume și face selecția efectivă.
 
 ## Eliminarea agenților
@@ -1051,8 +1082,8 @@ eroare. Un pas cu eroare nu întoarce rezultate parțiale și nu modifică lumea
 
 Acțiunea este permisă numai în reguli de celule; scrierile agenților folosesc în
 continuare `set_cell_property` și `set_cell_type`. `NeighborPropertyUpdate` și
-`FreeCellMove` sunt structuri temporare în `action.rs`, folosite în rezultatul
-evaluării; nu adaugă câmpuri lumii salvate.
+`Movement` sunt tipuri temporare în `action.rs`, folosite în rezultatul evaluării;
+nu adaugă câmpuri lumii salvate.
 
 ## Crearea agenților
 

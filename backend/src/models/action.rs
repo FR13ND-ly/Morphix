@@ -61,7 +61,7 @@ pub enum Action {
     RemoveAgent {},
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum NeighborSelection {
     First,
@@ -81,10 +81,14 @@ pub struct NeighborPropertyUpdate {
     pub value: f64,
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct FreeCellMove {
-    pub selection: NeighborSelection,
-    pub cell_type: Option<u8>,
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Movement {
+    Offset((i32, i32)),
+    FreeCell {
+        selection: NeighborSelection,
+        cell_type: Option<u8>,
+    },
+    RemovedNeighbor,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -120,9 +124,7 @@ impl CellUpdate {
 #[derive(Debug, Clone)]
 pub struct ActionResult {
     pub state: ObjectState,
-    pub movement: Option<(i32, i32)>,
-    pub free_cell_move: Option<FreeCellMove>,
-    pub move_to_removed_neighbor: bool,
+    pub movement: Option<Movement>,
     pub remove_agent: bool,
     pub neighbor_to_remove: Option<u64>,
     pub spawn: Option<AgentSpawn>,
@@ -135,8 +137,6 @@ impl ActionResult {
         Self {
             state: current.clone(),
             movement: None,
-            free_cell_move: None,
-            move_to_removed_neighbor: false,
             remove_agent: false,
             neighbor_to_remove: None,
             spawn: None,
@@ -243,7 +243,18 @@ pub fn apply_actions(
 ) -> Result<ActionResult, String> {
     automaton.validate()?;
     automaton.validate_object_state(current)?;
+    apply_actions_validated(actions, current, cell, neighbors, automaton, rng)
+}
 
+// The simulator has already validated the definition and current world.
+pub(crate) fn apply_actions_validated(
+    actions: &[Action],
+    current: &ObjectState,
+    cell: &ObjectState,
+    neighbors: &Neighbors<'_>,
+    automaton: &AutomatonDefinition,
+    rng: &mut impl Rng,
+) -> Result<ActionResult, String> {
     if actions.len() > 1
         && actions
             .iter()
@@ -295,8 +306,6 @@ pub fn apply_actions(
         }
     }
     let mut movement = None;
-    let mut free_cell_move = None;
-    let mut move_to_removed_neighbor = false;
     let mut remove_agent = false;
     let mut spawn = None;
     let mut cell_update: Option<CellUpdate> = None;
@@ -323,12 +332,12 @@ pub fn apply_actions(
                 cell_type,
             } => {
                 action.validate(automaton)?;
-                free_cell_move = Some(FreeCellMove {
+                movement = Some(Movement::FreeCell {
                     selection: *selection,
                     cell_type: *cell_type,
                 });
             }
-            Action::MoveToRemovedNeighbor {} => move_to_removed_neighbor = true,
+            Action::MoveToRemovedNeighbor {} => movement = Some(Movement::RemovedNeighbor),
             Action::SetProperty { property, value } => {
                 if !next.properties.contains_key(property) {
                     return Err(format!(
@@ -378,7 +387,7 @@ pub fn apply_actions(
                     .map_err(|error| format!("row_offset: {error}"))?;
                 let col = movement_offset(col_offset.evaluate(current, cell, neighbors)?)
                     .map_err(|error| format!("col_offset: {error}"))?;
-                movement = Some((row, col));
+                movement = Some(Movement::Offset((row, col)));
             }
             Action::MoveToFreeNeighbor {
                 selection,
@@ -403,10 +412,10 @@ pub fn apply_actions(
                     }
                 }
                 movement = match selection {
-                    NeighborSelection::First => candidates.first().copied(),
-                    NeighborSelection::Random if !candidates.is_empty() => {
-                        Some(candidates[rng.random_range(0..candidates.len())])
-                    }
+                    NeighborSelection::First => candidates.first().copied().map(Movement::Offset),
+                    NeighborSelection::Random if !candidates.is_empty() => Some(Movement::Offset(
+                        candidates[rng.random_range(0..candidates.len())],
+                    )),
                     NeighborSelection::Random => None,
                 };
             }
@@ -454,8 +463,6 @@ pub fn apply_actions(
     Ok(ActionResult {
         state: next,
         movement,
-        free_cell_move,
-        move_to_removed_neighbor,
         remove_agent,
         neighbor_to_remove,
         spawn,
