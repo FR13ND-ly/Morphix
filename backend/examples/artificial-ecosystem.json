@@ -1,0 +1,673 @@
+{
+  "automaton": {
+    "name": "Grass rabbit fox ecosystem",
+    "object_types": [
+      {
+        "id": 0,
+        "name": "empty",
+        "properties": {}
+      },
+      {
+        "id": 1,
+        "name": "grass",
+        "properties": {}
+      },
+      {
+        "id": 2,
+        "name": "rabbit",
+        "properties": {
+          "energy": {
+            "default_value": 8,
+            "min_value": 0,
+            "max_value": 1000000,
+            "integer_only": true
+          }
+        }
+      },
+      {
+        "id": 3,
+        "name": "fox",
+        "properties": {
+          "energy": {
+            "default_value": 12,
+            "min_value": 0,
+            "max_value": 1000000,
+            "integer_only": true
+          }
+        }
+      }
+    ],
+    "neighborhood": {
+      "offsets": [
+        [
+          -1,
+          -1
+        ],
+        [
+          -1,
+          0
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          0,
+          -1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          1,
+          1
+        ]
+      ]
+    },
+    "boundary": {
+      "kind": "wrap"
+    },
+    "rules": [
+      {
+        "target": "cell",
+        "condition": {
+          "kind": "type_is",
+          "args": 0
+        },
+        "probability": 0.2,
+        "actions": [
+          {
+            "kind": "set_type",
+            "type_id": 1
+          }
+        ]
+      },
+      {
+        "target": "agent",
+        "condition": {
+          "kind": "all",
+          "args": [
+            {
+              "kind": "type_is",
+              "args": 2
+            },
+            {
+              "kind": "compare",
+              "args": {
+                "left": {
+                  "kind": "property",
+                  "args": "energy"
+                },
+                "operator": {
+                  "kind": "less_or_equal"
+                },
+                "right": {
+                  "kind": "constant",
+                  "args": 0
+                }
+              }
+            }
+          ]
+        },
+        "probability": 1,
+        "actions": [
+          {
+            "kind": "remove_agent"
+          }
+        ]
+      },
+      {
+        "target": "agent",
+        "condition": {
+          "kind": "all",
+          "args": [
+            {
+              "kind": "type_is",
+              "args": 3
+            },
+            {
+              "kind": "compare",
+              "args": {
+                "left": {
+                  "kind": "property",
+                  "args": "energy"
+                },
+                "operator": {
+                  "kind": "less_or_equal"
+                },
+                "right": {
+                  "kind": "constant",
+                  "args": 0
+                }
+              }
+            }
+          ]
+        },
+        "probability": 1,
+        "actions": [
+          {
+            "kind": "remove_agent"
+          }
+        ]
+      },
+      {
+        "target": "agent",
+        "condition": {
+          "kind": "all",
+          "args": [
+            {
+              "kind": "type_is",
+              "args": 3
+            },
+            {
+              "kind": "compare",
+              "args": {
+                "left": {
+                  "kind": "count_neighbor_agents",
+                  "args": {
+                    "type_id": 2
+                  }
+                },
+                "operator": {
+                  "kind": "greater"
+                },
+                "right": {
+                  "kind": "constant",
+                  "args": 0
+                }
+              }
+            }
+          ]
+        },
+        "probability": 1,
+        "actions": [
+          {
+            "kind": "remove_neighbor_agent",
+            "type_id": 2,
+            "selection": "random"
+          },
+          {
+            "kind": "move_to_removed_neighbor"
+          },
+          {
+            "kind": "set_property",
+            "property": "energy",
+            "value": {
+              "kind": "add",
+              "args": [
+                {
+                  "kind": "property",
+                  "args": "energy"
+                },
+                {
+                  "kind": "constant",
+                  "args": 5
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "target": "agent",
+        "condition": {
+          "kind": "all",
+          "args": [
+            {
+              "kind": "type_is",
+              "args": 3
+            },
+            {
+              "kind": "compare",
+              "args": {
+                "left": {
+                  "kind": "property",
+                  "args": "energy"
+                },
+                "operator": {
+                  "kind": "greater_or_equal"
+                },
+                "right": {
+                  "kind": "constant",
+                  "args": 20
+                }
+              }
+            }
+          ]
+        },
+        "probability": 1,
+        "actions": [
+          {
+            "kind": "spawn_agent",
+            "type_id": 3,
+            "row_offset": {
+              "kind": "constant",
+              "args": 0
+            },
+            "col_offset": {
+              "kind": "constant",
+              "args": 1
+            },
+            "properties": {
+              "energy": {
+                "kind": "constant",
+                "args": 8
+              }
+            }
+          },
+          {
+            "kind": "set_property",
+            "property": "energy",
+            "value": {
+              "kind": "add",
+              "args": [
+                {
+                  "kind": "property",
+                  "args": "energy"
+                },
+                {
+                  "kind": "constant",
+                  "args": -8
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "target": "agent",
+        "condition": {
+          "kind": "all",
+          "args": [
+            {
+              "kind": "type_is",
+              "args": 2
+            },
+            {
+              "kind": "compare",
+              "args": {
+                "left": {
+                  "kind": "property",
+                  "args": "energy"
+                },
+                "operator": {
+                  "kind": "greater_or_equal"
+                },
+                "right": {
+                  "kind": "constant",
+                  "args": 12
+                }
+              }
+            }
+          ]
+        },
+        "probability": 1,
+        "actions": [
+          {
+            "kind": "spawn_agent",
+            "type_id": 2,
+            "row_offset": {
+              "kind": "constant",
+              "args": 0
+            },
+            "col_offset": {
+              "kind": "constant",
+              "args": 1
+            },
+            "properties": {
+              "energy": {
+                "kind": "constant",
+                "args": 4
+              }
+            }
+          },
+          {
+            "kind": "set_property",
+            "property": "energy",
+            "value": {
+              "kind": "add",
+              "args": [
+                {
+                  "kind": "property",
+                  "args": "energy"
+                },
+                {
+                  "kind": "constant",
+                  "args": -4
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "target": "agent",
+        "condition": {
+          "kind": "all",
+          "args": [
+            {
+              "kind": "type_is",
+              "args": 2
+            },
+            {
+              "kind": "cell_type_is",
+              "args": 1
+            }
+          ]
+        },
+        "probability": 1,
+        "actions": [
+          {
+            "kind": "set_cell_type",
+            "type_id": 0
+          },
+          {
+            "kind": "set_property",
+            "property": "energy",
+            "value": {
+              "kind": "add",
+              "args": [
+                {
+                  "kind": "property",
+                  "args": "energy"
+                },
+                {
+                  "kind": "constant",
+                  "args": 3
+                }
+              ]
+            }
+          },
+          {
+            "kind": "move_to_free_neighbor",
+            "selection": "random"
+          }
+        ]
+      },
+      {
+        "target": "agent",
+        "condition": {
+          "kind": "all",
+          "args": [
+            {
+              "kind": "type_is",
+              "args": 2
+            },
+            {
+              "kind": "compare",
+              "args": {
+                "left": {
+                  "kind": "count_neighbors",
+                  "args": {
+                    "type_id": 1
+                  }
+                },
+                "operator": {
+                  "kind": "greater"
+                },
+                "right": {
+                  "kind": "constant",
+                  "args": 0
+                }
+              }
+            }
+          ]
+        },
+        "probability": 1,
+        "actions": [
+          {
+            "kind": "set_property",
+            "property": "energy",
+            "value": {
+              "kind": "add",
+              "args": [
+                {
+                  "kind": "property",
+                  "args": "energy"
+                },
+                {
+                  "kind": "constant",
+                  "args": -1
+                }
+              ]
+            }
+          },
+          {
+            "kind": "move_to_free_neighbor",
+            "selection": "random",
+            "cell_type": 1
+          }
+        ]
+      },
+      {
+        "target": "agent",
+        "condition": {
+          "kind": "type_is",
+          "args": 2
+        },
+        "probability": 1,
+        "actions": [
+          {
+            "kind": "set_property",
+            "property": "energy",
+            "value": {
+              "kind": "add",
+              "args": [
+                {
+                  "kind": "property",
+                  "args": "energy"
+                },
+                {
+                  "kind": "constant",
+                  "args": -1
+                }
+              ]
+            }
+          },
+          {
+            "kind": "move_to_free_neighbor",
+            "selection": "random"
+          }
+        ]
+      },
+      {
+        "target": "agent",
+        "condition": {
+          "kind": "type_is",
+          "args": 3
+        },
+        "probability": 1,
+        "actions": [
+          {
+            "kind": "set_property",
+            "property": "energy",
+            "value": {
+              "kind": "add",
+              "args": [
+                {
+                  "kind": "property",
+                  "args": "energy"
+                },
+                {
+                  "kind": "constant",
+                  "args": -1
+                }
+              ]
+            }
+          },
+          {
+            "kind": "move_to_free_neighbor",
+            "selection": "random"
+          }
+        ]
+      }
+    ]
+  },
+  "initial_world": {
+    "cells": [
+      [
+        {
+          "type_id": 1,
+          "properties": {}
+        },
+        {
+          "type_id": 1,
+          "properties": {}
+        },
+        {
+          "type_id": 1,
+          "properties": {}
+        },
+        {
+          "type_id": 1,
+          "properties": {}
+        },
+        {
+          "type_id": 1,
+          "properties": {}
+        }
+      ],
+      [
+        {
+          "type_id": 1,
+          "properties": {}
+        },
+        {
+          "type_id": 1,
+          "properties": {}
+        },
+        {
+          "type_id": 1,
+          "properties": {}
+        },
+        {
+          "type_id": 1,
+          "properties": {}
+        },
+        {
+          "type_id": 1,
+          "properties": {}
+        }
+      ],
+      [
+        {
+          "type_id": 1,
+          "properties": {}
+        },
+        {
+          "type_id": 1,
+          "properties": {}
+        },
+        {
+          "type_id": 1,
+          "properties": {}
+        },
+        {
+          "type_id": 1,
+          "properties": {}
+        },
+        {
+          "type_id": 1,
+          "properties": {}
+        }
+      ],
+      [
+        {
+          "type_id": 1,
+          "properties": {}
+        },
+        {
+          "type_id": 1,
+          "properties": {}
+        },
+        {
+          "type_id": 1,
+          "properties": {}
+        },
+        {
+          "type_id": 1,
+          "properties": {}
+        },
+        {
+          "type_id": 1,
+          "properties": {}
+        }
+      ],
+      [
+        {
+          "type_id": 1,
+          "properties": {}
+        },
+        {
+          "type_id": 1,
+          "properties": {}
+        },
+        {
+          "type_id": 1,
+          "properties": {}
+        },
+        {
+          "type_id": 1,
+          "properties": {}
+        },
+        {
+          "type_id": 1,
+          "properties": {}
+        }
+      ]
+    ],
+    "agents": [
+      {
+        "id": 1,
+        "position": {
+          "row": 1,
+          "col": 1
+        },
+        "state": {
+          "type_id": 2,
+          "properties": {
+            "energy": 8
+          }
+        }
+      },
+      {
+        "id": 2,
+        "position": {
+          "row": 2,
+          "col": 2
+        },
+        "state": {
+          "type_id": 2,
+          "properties": {
+            "energy": 8
+          }
+        }
+      },
+      {
+        "id": 3,
+        "position": {
+          "row": 2,
+          "col": 1
+        },
+        "state": {
+          "type_id": 3,
+          "properties": {
+            "energy": 12
+          }
+        }
+      }
+    ]
+  },
+  "generations": 8,
+  "seed": 42,
+  "save_history": true
+}

@@ -1,0 +1,250 @@
+{
+  "automaton": {
+    "name": "Brian's Brain",
+    "object_types": [
+      {
+        "id": 0,
+        "name": "off",
+        "properties": {}
+      },
+      {
+        "id": 1,
+        "name": "firing",
+        "properties": {}
+      },
+      {
+        "id": 2,
+        "name": "dying",
+        "properties": {}
+      }
+    ],
+    "neighborhood": {
+      "offsets": [
+        [
+          -1,
+          -1
+        ],
+        [
+          -1,
+          0
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          0,
+          -1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          1,
+          1
+        ]
+      ]
+    },
+    "boundary": {
+      "kind": "fixed",
+      "state": {
+        "type_id": 0,
+        "properties": {}
+      }
+    },
+    "rules": [
+      {
+        "target": "cell",
+        "condition": {
+          "kind": "type_is",
+          "args": 1
+        },
+        "probability": 1,
+        "actions": [
+          {
+            "kind": "set_type",
+            "type_id": 2
+          }
+        ]
+      },
+      {
+        "target": "cell",
+        "condition": {
+          "kind": "type_is",
+          "args": 2
+        },
+        "probability": 1,
+        "actions": [
+          {
+            "kind": "set_type",
+            "type_id": 0
+          }
+        ]
+      },
+      {
+        "target": "cell",
+        "condition": {
+          "kind": "all",
+          "args": [
+            {
+              "kind": "type_is",
+              "args": 0
+            },
+            {
+              "kind": "compare",
+              "args": {
+                "left": {
+                  "kind": "count_neighbors",
+                  "args": {
+                    "type_id": 1
+                  }
+                },
+                "operator": {
+                  "kind": "equal"
+                },
+                "right": {
+                  "kind": "constant",
+                  "args": 2
+                }
+              }
+            }
+          ]
+        },
+        "probability": 1,
+        "actions": [
+          {
+            "kind": "set_type",
+            "type_id": 1
+          }
+        ]
+      }
+    ]
+  },
+  "initial_world": {
+    "cells": [
+      [
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        }
+      ],
+      [
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        }
+      ],
+      [
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 1,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 1,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        }
+      ],
+      [
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        }
+      ],
+      [
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        }
+      ]
+    ],
+    "agents": []
+  },
+  "generations": 6,
+  "seed": 42,
+  "save_history": true
+}

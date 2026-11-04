@@ -1,16 +1,8 @@
-mod config;
-mod models;
-mod engine;
-mod presets;
-
-use axum::{Json, routing::post};
-
-use models::simulation::{
-    SimulationRequest,
-    SimulationResult,
-};
 use axum::{Router, extract::State, http::StatusCode, routing::get};
-use config::{Config, db, state::AppState};
+use backend::{
+    api,
+    config::{Config, db, state::AppState},
+};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -24,15 +16,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pool = db::connect(&config.database_url).await?;
     let app = Router::new()
         .route("/health", get(health))
-        .route("/api/simulations", post(simulate))
-        .route(
-            "/api/examples/game-of-life",
-            get(|| async { Json(presets::game_of_life()) }),
-        )
-        .route(
-            "/api/examples/sandpile",
-            get(|| async { Json(presets::sandpile()) }),
-        )
+        .merge(api::router())
         .with_state(AppState { db: pool.clone() });
     let listener = tokio::net::TcpListener::bind(config.address).await?;
 
@@ -44,23 +28,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
     pool.close().await;
     Ok(())
-}
-
-async fn simulate(
-    Json(request): Json<SimulationRequest>,
-) -> Result<Json<SimulationResult>, (StatusCode, &'static str)> {
-    let result = tokio::task::spawn_blocking(move || {
-        engine::simulator::run(request)
-    })
-    .await
-    .map_err(|_| {
-        (StatusCode::INTERNAL_SERVER_ERROR, "Simulation failed")
-    })?
-    .map_err(|message| {
-        (StatusCode::UNPROCESSABLE_ENTITY, message)
-    })?;
-
-    Ok(Json(result))
 }
 
 async fn health(State(state): State<AppState>) -> Result<&'static str, StatusCode> {

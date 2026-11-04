@@ -1,0 +1,69 @@
+{
+  "automaton": {
+    "name": "Rule 30",
+    "object_types": [
+      { "id": 0, "name": "dead", "properties": {} },
+      { "id": 1, "name": "alive", "properties": {} }
+    ],
+    "neighborhood": { "offsets": [[0, -1], [0, 1]] },
+    "boundary": { "kind": "fixed", "state": { "type_id": 0, "properties": {} } },
+    "rules": [
+      {
+        "target": "cell",
+        "condition": {
+          "kind": "any",
+          "args": [
+            {
+              "kind": "all",
+              "args": [
+                { "kind": "neighbor_type_is", "args": { "offset": [0, -1], "type_id": 1 } },
+                { "kind": "type_is", "args": 0 },
+                { "kind": "neighbor_type_is", "args": { "offset": [0, 1], "type_id": 0 } }
+              ]
+            },
+            {
+              "kind": "all",
+              "args": [
+                { "kind": "neighbor_type_is", "args": { "offset": [0, -1], "type_id": 0 } },
+                {
+                  "kind": "any",
+                  "args": [
+                    { "kind": "type_is", "args": 1 },
+                    { "kind": "neighbor_type_is", "args": { "offset": [0, 1], "type_id": 1 } }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "probability": 1,
+        "actions": [{ "kind": "set_type", "type_id": 1 }]
+      },
+      {
+        "target": "cell",
+        "condition": { "kind": "always" },
+        "probability": 1,
+        "actions": [{ "kind": "set_type", "type_id": 0 }]
+      }
+    ]
+  },
+  "initial_world": {
+    "cells": [[
+      { "type_id": 0, "properties": {} },
+      { "type_id": 0, "properties": {} },
+      { "type_id": 0, "properties": {} },
+      { "type_id": 0, "properties": {} },
+      { "type_id": 0, "properties": {} },
+      { "type_id": 1, "properties": {} },
+      { "type_id": 0, "properties": {} },
+      { "type_id": 0, "properties": {} },
+      { "type_id": 0, "properties": {} },
+      { "type_id": 0, "properties": {} },
+      { "type_id": 0, "properties": {} }
+    ]],
+    "agents": []
+  },
+  "generations": 4,
+  "seed": 42,
+  "save_history": true
+}

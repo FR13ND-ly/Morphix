@@ -1,0 +1,172 @@
+{
+  "automaton": {
+    "name": "Local majority voter model",
+    "object_types": [
+      {
+        "id": 0,
+        "name": "opinion_a",
+        "properties": {}
+      },
+      {
+        "id": 1,
+        "name": "opinion_b",
+        "properties": {}
+      }
+    ],
+    "neighborhood": {
+      "offsets": [
+        [
+          -1,
+          -1
+        ],
+        [
+          -1,
+          0
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          0,
+          -1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          1,
+          1
+        ]
+      ]
+    },
+    "boundary": {
+      "kind": "fixed",
+      "state": {
+        "type_id": 0,
+        "properties": {}
+      }
+    },
+    "rules": [
+      {
+        "target": "cell",
+        "condition": {
+          "kind": "compare",
+          "args": {
+            "left": {
+              "kind": "count_neighbors",
+              "args": {
+                "type_id": 0
+              }
+            },
+            "operator": {
+              "kind": "greater"
+            },
+            "right": {
+              "kind": "count_neighbors",
+              "args": {
+                "type_id": 1
+              }
+            }
+          }
+        },
+        "probability": 1,
+        "actions": [
+          {
+            "kind": "set_type",
+            "type_id": 0
+          }
+        ]
+      },
+      {
+        "target": "cell",
+        "condition": {
+          "kind": "compare",
+          "args": {
+            "left": {
+              "kind": "count_neighbors",
+              "args": {
+                "type_id": 1
+              }
+            },
+            "operator": {
+              "kind": "greater"
+            },
+            "right": {
+              "kind": "count_neighbors",
+              "args": {
+                "type_id": 0
+              }
+            }
+          }
+        },
+        "probability": 1,
+        "actions": [
+          {
+            "kind": "set_type",
+            "type_id": 1
+          }
+        ]
+      }
+    ]
+  },
+  "initial_world": {
+    "cells": [
+      [
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 1,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        }
+      ],
+      [
+        {
+          "type_id": 1,
+          "properties": {}
+        },
+        {
+          "type_id": 1,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        }
+      ],
+      [
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 1,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        }
+      ]
+    ],
+    "agents": []
+  },
+  "generations": 6,
+  "seed": 42,
+  "save_history": true
+}

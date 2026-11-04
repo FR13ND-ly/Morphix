@@ -1,0 +1,259 @@
+{
+  "automaton": {
+    "name": "Falling sand and water particles",
+    "object_types": [
+      {
+        "id": 0,
+        "name": "air",
+        "properties": {}
+      },
+      {
+        "id": 1,
+        "name": "rock",
+        "properties": {}
+      },
+      {
+        "id": 2,
+        "name": "sand",
+        "properties": {}
+      },
+      {
+        "id": 3,
+        "name": "water",
+        "properties": {}
+      }
+    ],
+    "neighborhood": {
+      "offsets": [
+        [
+          1,
+          0
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          0,
+          -1
+        ],
+        [
+          0,
+          1
+        ]
+      ]
+    },
+    "boundary": {
+      "kind": "fixed",
+      "state": {
+        "type_id": 1,
+        "properties": {}
+      }
+    },
+    "rules": [
+      {
+        "target": "agent",
+        "condition": {
+          "kind": "type_is",
+          "args": 2
+        },
+        "probability": 1,
+        "actions": [
+          {
+            "kind": "move_to_free_neighbor",
+            "selection": "first",
+            "cell_type": 0,
+            "offsets": [
+              [
+                1,
+                0
+              ],
+              [
+                1,
+                -1
+              ],
+              [
+                1,
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "target": "agent",
+        "condition": {
+          "kind": "type_is",
+          "args": 3
+        },
+        "probability": 1,
+        "actions": [
+          {
+            "kind": "move_to_free_neighbor",
+            "selection": "first",
+            "cell_type": 0,
+            "offsets": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                -1
+              ],
+              [
+                0,
+                1
+              ]
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "initial_world": {
+    "cells": [
+      [
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        }
+      ],
+      [
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 1,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        }
+      ],
+      [
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        }
+      ],
+      [
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        }
+      ],
+      [
+        {
+          "type_id": 1,
+          "properties": {}
+        },
+        {
+          "type_id": 1,
+          "properties": {}
+        },
+        {
+          "type_id": 1,
+          "properties": {}
+        },
+        {
+          "type_id": 1,
+          "properties": {}
+        },
+        {
+          "type_id": 1,
+          "properties": {}
+        }
+      ]
+    ],
+    "agents": [
+      {
+        "id": 1,
+        "position": {
+          "row": 0,
+          "col": 2
+        },
+        "state": {
+          "type_id": 2,
+          "properties": {}
+        }
+      },
+      {
+        "id": 2,
+        "position": {
+          "row": 0,
+          "col": 4
+        },
+        "state": {
+          "type_id": 3,
+          "properties": {}
+        }
+      }
+    ]
+  },
+  "generations": 8,
+  "seed": 42,
+  "save_history": true
+}

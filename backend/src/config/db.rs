@@ -7,9 +7,16 @@ pub async fn connect(url: &str) -> Result<SqlitePool, sqlx::Error> {
         .create_if_missing(true)
         .foreign_keys(true);
 
-    SqlitePoolOptions::new()
+    let pool = SqlitePoolOptions::new()
         .max_connections(5)
         .acquire_timeout(Duration::from_secs(5))
         .connect_with(options)
-        .await
+        .await?;
+
+    let mut transaction = pool.begin().await?;
+    sqlx::raw_sql(include_str!("../../migrations/0001_create_simulations.sql"))
+        .execute(&mut *transaction)
+        .await?;
+    transaction.commit().await?;
+    Ok(pool)
 }

@@ -89,8 +89,10 @@ dependencies = [
  "dotenvy",
  "rand",
  "serde",
+ "serde_json",
  "sqlx",
  "tokio",
+ "tower",
 ]
 
 [[package]]

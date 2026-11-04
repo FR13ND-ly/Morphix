@@ -1,0 +1,140 @@
+{
+  "automaton": {
+    "name": "Traffic with unit speed",
+    "object_types": [
+      {
+        "id": 0,
+        "name": "road",
+        "properties": {}
+      },
+      {
+        "id": 1,
+        "name": "car",
+        "properties": {}
+      }
+    ],
+    "neighborhood": {
+      "offsets": [
+        [
+          0,
+          1
+        ]
+      ]
+    },
+    "boundary": {
+      "kind": "wrap"
+    },
+    "rules": [
+      {
+        "target": "agent",
+        "condition": {
+          "kind": "type_is",
+          "args": 1
+        },
+        "probability": 1,
+        "actions": [
+          {
+            "kind": "move_to_free_neighbor",
+            "selection": "first",
+            "cell_type": 0
+          }
+        ]
+      }
+    ]
+  },
+  "initial_world": {
+    "cells": [
+      [
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        }
+      ]
+    ],
+    "agents": [
+      {
+        "id": 1,
+        "position": {
+          "row": 0,
+          "col": 1
+        },
+        "state": {
+          "type_id": 1,
+          "properties": {}
+        }
+      },
+      {
+        "id": 2,
+        "position": {
+          "row": 0,
+          "col": 3
+        },
+        "state": {
+          "type_id": 1,
+          "properties": {}
+        }
+      },
+      {
+        "id": 3,
+        "position": {
+          "row": 0,
+          "col": 4
+        },
+        "state": {
+          "type_id": 1,
+          "properties": {}
+        }
+      },
+      {
+        "id": 4,
+        "position": {
+          "row": 0,
+          "col": 8
+        },
+        "state": {
+          "type_id": 1,
+          "properties": {}
+        }
+      }
+    ]
+  },
+  "generations": 6,
+  "seed": 42,
+  "save_history": true
+}

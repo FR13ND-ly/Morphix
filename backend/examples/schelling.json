@@ -1,0 +1,370 @@
+{
+  "automaton": {
+    "name": "Schelling segregation",
+    "object_types": [
+      {
+        "id": 0,
+        "name": "housing",
+        "properties": {}
+      },
+      {
+        "id": 1,
+        "name": "group_a",
+        "properties": {}
+      },
+      {
+        "id": 2,
+        "name": "group_b",
+        "properties": {}
+      }
+    ],
+    "neighborhood": {
+      "offsets": [
+        [
+          -1,
+          -1
+        ],
+        [
+          -1,
+          0
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          0,
+          -1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          1,
+          1
+        ]
+      ]
+    },
+    "boundary": {
+      "kind": "fixed",
+      "state": {
+        "type_id": 0,
+        "properties": {}
+      }
+    },
+    "rules": [
+      {
+        "target": "agent",
+        "condition": {
+          "kind": "all",
+          "args": [
+            {
+              "kind": "type_is",
+              "args": 1
+            },
+            {
+              "kind": "compare",
+              "args": {
+                "left": {
+                  "kind": "add",
+                  "args": [
+                    {
+                      "kind": "count_neighbor_agents",
+                      "args": {
+                        "type_id": 1
+                      }
+                    },
+                    {
+                      "kind": "count_neighbor_agents",
+                      "args": {
+                        "type_id": 2
+                      }
+                    }
+                  ]
+                },
+                "operator": {
+                  "kind": "greater"
+                },
+                "right": {
+                  "kind": "constant",
+                  "args": 0
+                }
+              }
+            },
+            {
+              "kind": "compare",
+              "args": {
+                "left": {
+                  "kind": "divide",
+                  "args": [
+                    {
+                      "kind": "count_neighbor_agents",
+                      "args": {
+                        "type_id": 1
+                      }
+                    },
+                    {
+                      "kind": "add",
+                      "args": [
+                        {
+                          "kind": "count_neighbor_agents",
+                          "args": {
+                            "type_id": 1
+                          }
+                        },
+                        {
+                          "kind": "count_neighbor_agents",
+                          "args": {
+                            "type_id": 2
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "operator": {
+                  "kind": "less"
+                },
+                "right": {
+                  "kind": "constant",
+                  "args": 0.4
+                }
+              }
+            }
+          ]
+        },
+        "probability": 1,
+        "actions": [
+          {
+            "kind": "move_to_free_cell",
+            "selection": "random",
+            "cell_type": 0
+          }
+        ]
+      },
+      {
+        "target": "agent",
+        "condition": {
+          "kind": "all",
+          "args": [
+            {
+              "kind": "type_is",
+              "args": 2
+            },
+            {
+              "kind": "compare",
+              "args": {
+                "left": {
+                  "kind": "add",
+                  "args": [
+                    {
+                      "kind": "count_neighbor_agents",
+                      "args": {
+                        "type_id": 1
+                      }
+                    },
+                    {
+                      "kind": "count_neighbor_agents",
+                      "args": {
+                        "type_id": 2
+                      }
+                    }
+                  ]
+                },
+                "operator": {
+                  "kind": "greater"
+                },
+                "right": {
+                  "kind": "constant",
+                  "args": 0
+                }
+              }
+            },
+            {
+              "kind": "compare",
+              "args": {
+                "left": {
+                  "kind": "divide",
+                  "args": [
+                    {
+                      "kind": "count_neighbor_agents",
+                      "args": {
+                        "type_id": 2
+                      }
+                    },
+                    {
+                      "kind": "add",
+                      "args": [
+                        {
+                          "kind": "count_neighbor_agents",
+                          "args": {
+                            "type_id": 1
+                          }
+                        },
+                        {
+                          "kind": "count_neighbor_agents",
+                          "args": {
+                            "type_id": 2
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "operator": {
+                  "kind": "less"
+                },
+                "right": {
+                  "kind": "constant",
+                  "args": 0.4
+                }
+              }
+            }
+          ]
+        },
+        "probability": 1,
+        "actions": [
+          {
+            "kind": "move_to_free_cell",
+            "selection": "random",
+            "cell_type": 0
+          }
+        ]
+      }
+    ]
+  },
+  "initial_world": {
+    "cells": [
+      [
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        }
+      ],
+      [
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        }
+      ],
+      [
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        }
+      ],
+      [
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        },
+        {
+          "type_id": 0,
+          "properties": {}
+        }
+      ]
+    ],
+    "agents": [
+      {
+        "id": 1,
+        "position": {
+          "row": 1,
+          "col": 1
+        },
+        "state": {
+          "type_id": 1,
+          "properties": {}
+        }
+      },
+      {
+        "id": 2,
+        "position": {
+          "row": 1,
+          "col": 2
+        },
+        "state": {
+          "type_id": 1,
+          "properties": {}
+        }
+      },
+      {
+        "id": 3,
+        "position": {
+          "row": 2,
+          "col": 1
+        },
+        "state": {
+          "type_id": 2,
+          "properties": {}
+        }
+      },
+      {
+        "id": 4,
+        "position": {
+          "row": 2,
+          "col": 2
+        },
+        "state": {
+          "type_id": 2,
+          "properties": {}
+        }
+      }
+    ]
+  },
+  "generations": 8,
+  "seed": 42,
+  "save_history": true
+}

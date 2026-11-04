@@ -1,0 +1,205 @@
+{
+  "automaton": {
+    "name": "Parallel sandpile",
+    "object_types": [
+      {
+        "id": 0,
+        "name": "pile",
+        "properties": {
+          "grains": {
+            "default_value": 0,
+            "min_value": 0,
+            "max_value": 1000000,
+            "integer_only": true
+          }
+        }
+      }
+    ],
+    "neighborhood": {
+      "offsets": [
+        [
+          -1,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          0,
+          -1
+        ],
+        [
+          0,
+          1
+        ]
+      ]
+    },
+    "boundary": {
+      "kind": "fixed",
+      "state": {
+        "type_id": 0,
+        "properties": {
+          "grains": 0
+        }
+      }
+    },
+    "rules": [
+      {
+        "target": "cell",
+        "condition": {
+          "kind": "compare",
+          "args": {
+            "left": {
+              "kind": "property",
+              "args": "grains"
+            },
+            "operator": {
+              "kind": "greater_or_equal"
+            },
+            "right": {
+              "kind": "constant",
+              "args": 4
+            }
+          }
+        },
+        "probability": 1,
+        "actions": [
+          {
+            "kind": "set_property",
+            "property": "grains",
+            "value": {
+              "kind": "subtract",
+              "args": [
+                {
+                  "kind": "property",
+                  "args": "grains"
+                },
+                {
+                  "kind": "constant",
+                  "args": 4
+                }
+              ]
+            }
+          },
+          {
+            "kind": "add_neighbor_property",
+            "offset": [
+              -1,
+              0
+            ],
+            "property": "grains",
+            "value": {
+              "kind": "constant",
+              "args": 1
+            }
+          },
+          {
+            "kind": "add_neighbor_property",
+            "offset": [
+              1,
+              0
+            ],
+            "property": "grains",
+            "value": {
+              "kind": "constant",
+              "args": 1
+            }
+          },
+          {
+            "kind": "add_neighbor_property",
+            "offset": [
+              0,
+              -1
+            ],
+            "property": "grains",
+            "value": {
+              "kind": "constant",
+              "args": 1
+            }
+          },
+          {
+            "kind": "add_neighbor_property",
+            "offset": [
+              0,
+              1
+            ],
+            "property": "grains",
+            "value": {
+              "kind": "constant",
+              "args": 1
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "initial_world": {
+    "cells": [
+      [
+        {
+          "type_id": 0,
+          "properties": {
+            "grains": 0
+          }
+        },
+        {
+          "type_id": 0,
+          "properties": {
+            "grains": 0
+          }
+        },
+        {
+          "type_id": 0,
+          "properties": {
+            "grains": 0
+          }
+        }
+      ],
+      [
+        {
+          "type_id": 0,
+          "properties": {
+            "grains": 0
+          }
+        },
+        {
+          "type_id": 0,
+          "properties": {
+            "grains": 8
+          }
+        },
+        {
+          "type_id": 0,
+          "properties": {
+            "grains": 0
+          }
+        }
+      ],
+      [
+        {
+          "type_id": 0,
+          "properties": {
+            "grains": 0
+          }
+        },
+        {
+          "type_id": 0,
+          "properties": {
+            "grains": 0
+          }
+        },
+        {
+          "type_id": 0,
+          "properties": {
+            "grains": 0
+          }
+        }
+      ]
+    ],
+    "agents": []
+  },
+  "generations": 6,
+  "seed": 42,
+  "save_history": true
+}
