@@ -1,0 +1,249 @@
+@if (loading()) {
+  <h1 class="text-[22px] font-semibold">Simulare</h1>
+  <p class="status-message" role="status">Se încarcă simularea…</p>
+} @else if (error()) {
+  <h1 class="text-[22px] font-semibold">Simulare indisponibilă</h1>
+  <p class="status-message status-error" role="alert">{{ error() }}</p>
+} @else if (simulation(); as saved) {
+  <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <h1 class="text-[22px] font-semibold">{{ saved.request.automaton.name }}</h1>
+      <p class="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
+        #{{ saved.id }} · {{ saved.created_at | date: 'dd.MM, HH:mm' }} · seed
+        {{ saved.request.seed }}
+      </p>
+    </div>
+    <button
+      type="button"
+      class="button text-red-700 dark:text-red-300"
+      [disabled]="deleting() || confirmingDelete()"
+      (click)="askDelete()"
+    >
+      Șterge
+    </button>
+  </div>
+
+  @if (confirmingDelete()) {
+    <div class="mb-6" role="group" aria-label="Confirmă ștergerea simulării">
+      <p>Ștergi simularea „{{ saved.request.automaton.name }}” și toate generațiile ei salvate?</p>
+      <div class="mt-3 flex flex-wrap gap-2.5">
+        <button
+          type="button"
+          class="button border-red-700 bg-red-700 text-white dark:border-red-300 dark:bg-red-300 dark:text-red-950"
+          [disabled]="deleting()"
+          (click)="confirmDelete()"
+        >
+          {{ deleting() ? 'Se șterge…' : 'Șterge definitiv' }}
+        </button>
+        <button type="button" class="button" [disabled]="deleting()" (click)="cancelDelete()">
+          Renunță
+        </button>
+      </div>
+      @if (deleteError()) {
+        <p class="status-message status-error" role="alert">{{ deleteError() }}</p>
+      }
+    </div>
+  }
+
+  @if (generation(); as snapshot) {
+    <h2 class="sr-only">Generația {{ snapshot.generation }}</h2>
+    <nav aria-label="Generații salvate" class="mb-5 flex flex-wrap items-center gap-2.5">
+      <label class="flex items-center gap-2 text-neutral-600 dark:text-neutral-400">
+        Generația
+        <select
+          class="form-input w-20"
+          [disabled]="confirmingDelete() || deleting()"
+          (change)="changeFrame($event)"
+          aria-label="Generația afișată"
+        >
+          @for (frame of saved.history; track frame.generation; let index = $index) {
+            <option [value]="index" [selected]="index === selectedIndex()">
+              {{ frame.generation }}
+            </option>
+          }
+        </select>
+      </label>
+      <button
+        class="button"
+        type="button"
+        aria-label="Generația anterioară"
+        [disabled]="selectedIndex() === 0 || confirmingDelete() || deleting()"
+        (click)="selectFrame(selectedIndex() - 1)"
+      >
+        ← Înapoi
+      </button>
+      <button
+        class="button"
+        type="button"
+        aria-label="Generația următoare"
+        [disabled]="advancing() || confirmingDelete() || deleting()"
+        (click)="next()"
+      >
+        Înainte →
+      </button>
+      <span
+        class="relative inline-flex h-5 w-40 items-center gap-2 text-sm tabular-nums text-neutral-600 dark:text-neutral-400"
+        role="status"
+        [attr.aria-busy]="prefetching()"
+      >
+        <span
+          aria-hidden="true"
+          class="size-3 shrink-0 rounded-full border-2 border-current border-r-transparent"
+          [class.animate-spin]="prefetching()"
+          [class.invisible]="!prefetching()"
+        ></span>
+        {{ saved.request.generations }} calculate
+        <span class="sr-only">{{ prefetching() ? 'Se pregătesc generații în avans.' : '' }}</span>
+      </span>
+    </nav>
+    @if (stepError()) {
+      <p class="status-message status-error mb-4" role="alert">{{ stepError() }}</p>
+    }
+    @if (saved.request.save_history === false) {
+      <p class="mb-4 text-sm text-neutral-600 dark:text-neutral-400">
+        Generațiile intermediare nu au fost păstrate.
+      </p>
+    }
+
+    <div class="grid items-start gap-7 sm:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
+      <div class="min-w-0">
+        <div class="max-h-[32rem] overflow-auto">
+          <div
+            class="grid gap-px border border-neutral-300 bg-neutral-300 dark:border-neutral-600 dark:bg-neutral-600"
+            [style.width.px]="gridWidth()"
+            [style.grid-template-columns]="
+              'repeat(' + snapshot.world.cells[0].length + ', minmax(0, 1fr))'
+            "
+            role="group"
+            aria-label="Grila simulării"
+          >
+            @for (row of snapshot.world.cells; track $index; let rowIndex = $index) {
+              @for (cell of row; track $index; let colIndex = $index) {
+                <button
+                  type="button"
+                  class="world-cell"
+                  [style.background-color]="typeColor(cell.type_id)"
+                  [attr.aria-label]="
+                    'Celula ' + rowIndex + ', ' + colIndex + ': ' + typeName(cell.type_id)
+                  "
+                  [attr.aria-pressed]="
+                    selectedCell()?.row === rowIndex && selectedCell()?.col === colIndex
+                  "
+                  (click)="selectedCell.set({ row: rowIndex, col: colIndex })"
+                >
+                  @if (agentsByCell().has(rowIndex + ',' + colIndex)) {
+                    <span
+                      aria-hidden="true"
+                      class="absolute top-1/2 left-1/2 size-1/2 min-h-1.5 min-w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-700 ring-1 ring-white dark:bg-blue-200 dark:ring-neutral-900"
+                    ></span>
+                  }
+                </button>
+              }
+            }
+          </div>
+        </div>
+        <ul
+          aria-label="Tipuri de obiecte"
+          class="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-neutral-600 dark:text-neutral-400"
+        >
+          @for (type of saved.request.automaton.object_types; track type.id) {
+            <li class="flex items-center gap-1.5">
+              <span
+                class="size-2.5 border border-neutral-300 dark:border-neutral-600"
+                [style.background-color]="typeColor(type.id)"
+                aria-hidden="true"
+              ></span
+              >{{ type.id }} — {{ type.name }}
+            </li>
+          }
+          @if (snapshot.world.agents.length > 0) {
+            <li class="flex items-center gap-1.5">
+              <span
+                class="size-2 rounded-full bg-blue-700 dark:bg-blue-200"
+                aria-hidden="true"
+              ></span
+              >Agent
+            </li>
+          }
+        </ul>
+      </div>
+
+      <aside aria-label="Inspector celulă" class="min-w-0 text-sm">
+        <h3 class="text-base font-semibold">Celulă</h3>
+        @if (inspectedState(); as state) {
+          <p class="mt-2">Celula ({{ selectedCell()!.row }}, {{ selectedCell()!.col }})</p>
+          <p class="mt-1 text-neutral-600 dark:text-neutral-400">
+            {{ state.type_id }} — {{ typeName(state.type_id) }}
+          </p>
+          <dl class="mt-3 grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5">
+            @for (property of state.properties | keyvalue; track property.key) {
+              <dt class="break-all text-neutral-600 dark:text-neutral-400">{{ property.key }}</dt>
+              <dd class="break-all tabular-nums">{{ property.value }}</dd>
+            } @empty {
+              <dt class="col-span-2 text-neutral-600 dark:text-neutral-400">
+                Fără proprietăți numerice.
+              </dt>
+            }
+          </dl>
+          @for (agent of inspectedAgents(); track agent.id) {
+            <div class="mt-4">
+              <h4 class="font-semibold">
+                Agent #{{ agent.id }} · {{ typeName(agent.state.type_id) }}
+              </h4>
+              <pre class="json-output">{{ agent.state.properties | json }}</pre>
+            </div>
+          }
+        } @else {
+          <p class="mt-2 text-neutral-600 dark:text-neutral-400">Alege o celulă din grilă.</p>
+        }
+        <p class="mt-4 text-neutral-600 dark:text-neutral-400">
+          Grilă: {{ snapshot.world.cells.length }} × {{ snapshot.world.cells[0].length }}
+        </p>
+        <p class="mt-1 text-neutral-600 dark:text-neutral-400">
+          Agenți: {{ snapshot.world.agents.length }}
+        </p>
+      </aside>
+    </div>
+
+    @if (snapshot.world.agents.length > 0) {
+      <section class="mt-7" aria-label="Agenții din generația curentă">
+        <h3 class="mb-2 text-base font-semibold">Agenți</h3>
+        <div class="relative overflow-x-auto">
+          <table class="data-table min-w-[480px]">
+            <thead>
+              <tr>
+                <th scope="col">ID</th>
+                <th scope="col">Tip</th>
+                <th scope="col">Poziție (rând, coloană)</th>
+                <th scope="col">Proprietăți</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (agent of snapshot.world.agents; track agent.id) {
+                <tr>
+                  <td>{{ agent.id }}</td>
+                  <td>{{ typeName(agent.state.type_id) }}</td>
+                  <td>{{ agent.position.row }}, {{ agent.position.col }}</td>
+                  <td>
+                    <pre class="whitespace-pre-wrap break-all font-mono text-xs">{{
+                      agent.state.properties | json
+                    }}</pre>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+  } @else {
+    <p class="status-message">Simularea nu conține generații salvate.</p>
+  }
+
+  <details class="mt-6">
+    <summary class="text-sm text-neutral-600 dark:text-neutral-400">
+      Configurația originală și parametrii rulării
+    </summary>
+    <pre class="json-output">{{ saved.request | json }}</pre>
+  </details>
+}

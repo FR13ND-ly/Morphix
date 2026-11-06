@@ -1,3 +1,5 @@
+mod common;
+
 use std::collections::BTreeMap;
 
 use backend::{
@@ -125,8 +127,7 @@ fn type_grid(world: &World) -> Vec<Vec<u8>> {
 
 #[test]
 fn rule_30_configuration_matches_all_eight_left_center_right_combinations() {
-    let request: SimulationRequest =
-        serde_json::from_str(include_str!("../examples/rule-30.json")).unwrap();
+    let request: SimulationRequest = serde_json::from_value(common::directional_cells()).unwrap();
     for reversed in [false, true] {
         let mut automaton = request.automaton.clone();
         if reversed {
@@ -158,8 +159,7 @@ fn rule_30_configuration_matches_all_eight_left_center_right_combinations() {
 
 #[test]
 fn rule_30_example_produces_the_reference_generations_from_one_live_cell() {
-    let request: SimulationRequest =
-        serde_json::from_str(include_str!("../examples/rule-30.json")).unwrap();
+    let request: SimulationRequest = serde_json::from_value(common::directional_cells()).unwrap();
     let history = run(
         &request.automaton,
         &request.initial_world,
@@ -185,8 +185,7 @@ fn rule_30_example_produces_the_reference_generations_from_one_live_cell() {
 
 #[test]
 fn directional_rule_30_reads_apply_fixed_and_wrapped_boundaries_on_one_cell_worlds() {
-    let request: SimulationRequest =
-        serde_json::from_str(include_str!("../examples/rule-30.json")).unwrap();
+    let request: SimulationRequest = serde_json::from_value(common::directional_cells()).unwrap();
     let initial = life_world(1, 1, &[(0, 0)]);
     for (boundary, expected) in [
         (Boundary::Fixed { state: state(0) }, 1),

@@ -5,10 +5,11 @@ edition = "2024"
 
 [dependencies]
 axum = "0.8.9"
+chacha20 = { version = "0.10.2", default-features = false, features = ["rng"] }
 dotenvy = "0.15.7"
 rand = "0.10.3"
 serde = { version = "1.0.229", features = ["derive"] }
-serde_json = "1.0.152"
+serde_json = { version = "1.0.152", features = ["float_roundtrip"] }
 sqlx = { version = "0.8.6", default-features = false, features = ["runtime-tokio", "sqlite"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "signal"] }
 

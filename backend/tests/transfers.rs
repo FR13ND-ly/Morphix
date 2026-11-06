@@ -1,3 +1,5 @@
+mod common;
+
 use backend::{
     models::{automaton::Boundary, simulation::SimulationRequest, state::ObjectState},
     simulator::run,
@@ -5,7 +7,7 @@ use backend::{
 use serde_json::{Value, json};
 
 fn request() -> SimulationRequest {
-    serde_json::from_str(include_str!("../examples/sandpile.json")).unwrap()
+    serde_json::from_value(common::numeric_transfers()).unwrap()
 }
 
 fn numeric_grid(request: &mut SimulationRequest, values: &[&[f64]]) {

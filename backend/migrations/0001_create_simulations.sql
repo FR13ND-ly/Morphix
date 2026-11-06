@@ -10,3 +10,8 @@ CREATE TABLE IF NOT EXISTS simulation_generations (
     world_json TEXT NOT NULL,
     PRIMARY KEY (simulation_id, generation)
 );
+
+CREATE TABLE IF NOT EXISTS simulation_checkpoints (
+    simulation_id INTEGER PRIMARY KEY REFERENCES simulations(id) ON DELETE CASCADE,
+    state_json TEXT NOT NULL
+);

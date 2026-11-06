@@ -37,6 +37,19 @@ pub struct SimulationGeneration {
     pub world: World,
 }
 
+// Internal continuation data; the world itself is stored with its generation.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SimulationCheckpoint {
+    pub rng_word_pos: u128,
+    pub last_agent_id: u64,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SimulationStepRequest {
+    pub generation: usize,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SimulationResponse {
@@ -52,6 +65,62 @@ pub struct StoredSimulation {
     pub created_at: String,
     pub request: SimulationRequest,
     pub history: Vec<SimulationGeneration>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct SimulationListQuery {
+    pub page: u32,
+    pub page_size: u32,
+    pub search: String,
+    pub sort: SimulationSort,
+    pub order: SortOrder,
+}
+
+impl Default for SimulationListQuery {
+    fn default() -> Self {
+        Self {
+            page: 1,
+            page_size: 20,
+            search: String::new(),
+            sort: SimulationSort::CreatedAt,
+            order: SortOrder::Desc,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SimulationSort {
+    CreatedAt,
+    Name,
+    Generations,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SortOrder {
+    Asc,
+    Desc,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SimulationSummary {
+    pub id: i64,
+    pub name: String,
+    pub created_at: String,
+    pub width: usize,
+    pub height: usize,
+    pub generations: usize,
+    pub save_history: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SimulationListResponse {
+    pub items: Vec<SimulationSummary>,
+    pub total: i64,
+    pub page: u32,
+    pub page_size: u32,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

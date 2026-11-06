@@ -1156,6 +1156,17 @@ fn removal_frees_birth_positions_and_ids_are_not_reused_across_a_run() {
     assert_eq!(final_only.len(), 1);
     assert_eq!(final_only[0].generation, 3);
     assert_eq!(final_only[0].world.agents[1].id, 103);
+    let (mut initial_history, mut checkpoint) =
+        backend::simulator::run_with_checkpoint(&definition, &initial, 0, 42, true).unwrap();
+    let mut current = initial_history.pop().unwrap();
+    for expected in history.iter().skip(1) {
+        (current, checkpoint) =
+            backend::simulator::continue_step(&definition, &current, 42, checkpoint).unwrap();
+        assert_eq!(
+            serde_json::to_value(&current).unwrap(),
+            serde_json::to_value(expected).unwrap()
+        );
+    }
     assert_eq!(
         serde_json::to_value(&final_only[0]).unwrap(),
         serde_json::to_value(&history[3]).unwrap()

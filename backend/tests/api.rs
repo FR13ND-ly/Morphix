@@ -1,3 +1,5 @@
+mod common;
+
 use axum::{
     body::{Body, to_bytes},
     http::{Request, StatusCode},
@@ -742,7 +744,7 @@ async fn rejects_invalid_constant_arithmetic_before_the_first_generation() {
 }
 
 fn movement_request() -> Value {
-    serde_json::from_str(include_str!("../examples/moving-agents.json")).unwrap()
+    serde_json::from_value(common::moving_agents()).unwrap()
 }
 
 #[tokio::test]
@@ -1925,7 +1927,7 @@ fn free_movement_request(selection: &str) -> Value {
 }
 
 fn predator_prey_request() -> Value {
-    serde_json::from_str(include_str!("../examples/predator-prey.json")).unwrap()
+    serde_json::from_value(common::captures()).unwrap()
 }
 
 #[tokio::test]
@@ -2188,8 +2190,7 @@ async fn validates_free_movement_targets_filters_selection_and_action_count_at_z
 
 #[tokio::test]
 async fn runs_rule_30_from_json_through_the_simulation_endpoint() {
-    let mut request: Value =
-        serde_json::from_str(include_str!("../examples/rule-30.json")).unwrap();
+    let mut request: Value = serde_json::from_value(common::directional_cells()).unwrap();
     let (status, response) = post(&request).await;
     assert_eq!(status, StatusCode::OK, "{response}");
     let expected = [

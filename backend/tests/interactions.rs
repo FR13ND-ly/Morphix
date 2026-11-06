@@ -1,3 +1,5 @@
+mod common;
+
 use std::collections::BTreeMap;
 
 use backend::{
@@ -375,8 +377,7 @@ fn later_movement_conflicts_do_not_undo_an_accepted_capture() {
 
 #[test]
 fn predator_prey_example_replays_and_starving_predators_eventually_remove_themselves() {
-    let request: SimulationRequest =
-        serde_json::from_str(include_str!("../examples/predator-prey.json")).unwrap();
+    let request: SimulationRequest = serde_json::from_value(common::captures()).unwrap();
     let history = run(
         &request.automaton,
         &request.initial_world,

@@ -1,6 +1,7 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 
-use rand::{Rng, RngExt, SeedableRng, rngs::StdRng};
+use chacha20::ChaCha12Rng;
+use rand::{Rng, RngExt, SeedableRng};
 
 use crate::models::{
     action::{
@@ -10,7 +11,9 @@ use crate::models::{
     automaton::{AutomatonDefinition, Boundary},
     position::Position,
     rule::{RuleTarget, apply_rules_validated},
-    simulation::{MAX_HISTORY_UNITS, SimulationGeneration, world_history_units},
+    simulation::{
+        MAX_HISTORY_UNITS, SimulationCheckpoint, SimulationGeneration, world_history_units,
+    },
     world::World,
 };
 
@@ -384,11 +387,23 @@ pub fn run(
     seed: u64,
     save_history: bool,
 ) -> Result<Vec<SimulationGeneration>, String> {
+    run_with_checkpoint(automaton, initial, generations, seed, save_history)
+        .map(|(history, _)| history)
+}
+
+pub fn run_with_checkpoint(
+    automaton: &AutomatonDefinition,
+    initial: &World,
+    generations: usize,
+    seed: u64,
+    save_history: bool,
+) -> Result<(Vec<SimulationGeneration>, SimulationCheckpoint), String> {
     automaton
         .validate_world(initial)
         .map_err(|error| format!("Generation 0: {error}"))?;
 
-    let mut rng = StdRng::seed_from_u64(seed);
+    // Same algorithm as rand 0.10 StdRng, with access to its resumable position.
+    let mut rng = ChaCha12Rng::seed_from_u64(seed);
     let mut last_agent_id = initial
         .agents
         .iter()
@@ -441,7 +456,52 @@ pub fn run(
         world: current,
     });
 
-    Ok(history)
+    Ok((
+        history,
+        SimulationCheckpoint {
+            rng_word_pos: rng.get_word_pos(),
+            last_agent_id,
+        },
+    ))
+}
+
+pub fn continue_step(
+    automaton: &AutomatonDefinition,
+    current: &SimulationGeneration,
+    seed: u64,
+    checkpoint: SimulationCheckpoint,
+) -> Result<(SimulationGeneration, SimulationCheckpoint), String> {
+    let generation = current
+        .generation
+        .checked_add(1)
+        .filter(|generation| i64::try_from(*generation).is_ok())
+        .ok_or_else(|| "Generation number cannot be stored".to_owned())?;
+    automaton
+        .validate_world(&current.world)
+        .map_err(|error| format!("Generation {}: {error}", current.generation))?;
+    let mut rng = ChaCha12Rng::seed_from_u64(seed);
+    rng.set_word_pos(checkpoint.rng_word_pos);
+    let mut last_agent_id = checkpoint.last_agent_id;
+    let world = step_with_ids(automaton, &current.world, &mut rng, &mut last_agent_id)
+        .map_err(|error| format!("Generation {generation}: {error}"))?;
+    let max_properties = automaton
+        .object_types
+        .iter()
+        .map(|object_type| object_type.properties.len())
+        .max()
+        .unwrap_or(0);
+    if world_history_units(&world, max_properties).is_none_or(|units| units > MAX_HISTORY_UNITS) {
+        return Err(format!(
+            "Generation {generation}: World exceeds {MAX_HISTORY_UNITS} state/property units"
+        ));
+    }
+    Ok((
+        SimulationGeneration { generation, world },
+        SimulationCheckpoint {
+            rng_word_pos: rng.get_word_pos(),
+            last_agent_id,
+        },
+    ))
 }
 
 fn history_limit_error(generation: usize) -> String {

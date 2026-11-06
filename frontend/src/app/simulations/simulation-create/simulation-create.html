@@ -1,0 +1,276 @@
+<h1 class="mb-6 text-[22px] font-semibold">Simulare nouă</h1>
+
+<div class="max-w-xl">
+  <p>Pe viitor, vei crea o simulare descriind în cuvinte lumea și regulile ei.</p>
+  <p class="mt-2 text-neutral-600 dark:text-neutral-400">
+    Deocamdată, folosește unul dintre cele patru exemple de test.
+  </p>
+  <fieldset [disabled]="busy() !== null" class="mt-5 flex flex-wrap items-end gap-2.5">
+    <legend class="sr-only">Alegerea exemplului de test</legend>
+    <label for="example" class="flex w-full flex-col gap-2 sm:w-auto">
+      Exemplu de test
+      <select id="example" class="form-input sm:min-w-64" [formControl]="example">
+        @for (item of examples; track item.id) {
+          <option [value]="item.id">{{ item.name }}</option>
+        }
+      </select>
+    </label>
+    <button type="button" class="button" (click)="loadExample()">Încarcă</button>
+  </fieldset>
+
+  @if (configuration(); as request) {
+    <section
+      class="mt-7 border-t border-neutral-300 pt-5 dark:border-neutral-700"
+      aria-label="Configurația selectată"
+    >
+      <h2 class="text-base font-semibold">{{ request.automaton.name }}</h2>
+      <fieldset [formGroup]="parameters" [disabled]="busy() !== null" class="mt-4 space-y-4">
+        <legend class="sr-only">Parametrii rulării</legend>
+        <p class="text-sm text-neutral-600 dark:text-neutral-400">
+          Simularea pornește de la generația 0. Folosește „Înainte” pentru a calcula următoarele
+          generații. Câteva sunt pregătite în avans, fără să schimbe generația afișată.
+        </p>
+        <div>
+          <label for="seed" class="mb-2 block">Seed</label>
+          <div class="flex flex-wrap items-center gap-2.5">
+            <input
+              id="seed"
+              type="number"
+              class="form-input w-52 max-w-full"
+              formControlName="seed"
+              min="0"
+              [max]="maxSeed"
+              step="1"
+              aria-describedby="seed-help"
+              [attr.aria-invalid]="
+                parameters.controls.seed.invalid && parameters.controls.seed.touched
+              "
+            />
+            <button type="button" class="button" (click)="generateSeed()">Seed aleatoriu</button>
+          </div>
+          <p id="seed-help" class="mt-1 text-xs text-neutral-600 dark:text-neutral-400">
+            Între 0 și {{ maxSeed }}. Seed-ul controlează generarea inițială și regulile
+            probabilistice. Același seed și aceeași configurație reproduc rezultatul.
+          </p>
+        </div>
+        <div>
+          <label class="flex items-center gap-2">
+            <input type="checkbox" formControlName="randomize" />
+            Generează o lume aleatorie după seed
+          </label>
+          <p class="mt-1 text-xs text-neutral-600 dark:text-neutral-400">
+            Tipurile celulelor, proprietățile și pozițiile agenților sunt generate după setările de
+            mai jos. Debifează pentru lumea exactă din JSON.
+          </p>
+        </div>
+      </fieldset>
+
+      @if (parameters.controls.randomize.value) {
+        <details class="mt-4">
+          <summary>Distribuție și proprietăți inițiale</summary>
+          <p class="mt-2 text-xs text-neutral-600 dark:text-neutral-400">
+            Ponderile sunt relative: 70 și 30 înseamnă probabilități de 70% și 30%. Numărul efectiv
+            de celule variază. Pentru proprietăți, minim egal cu maxim fixează o valoare.
+          </p>
+          <fieldset [disabled]="busy() !== null" class="mt-4 space-y-5">
+            <legend class="sr-only">Generarea lumii inițiale</legend>
+            @for (type of initialTypes(); track type.type_id) {
+              <div class="border-t border-neutral-300 pt-3 dark:border-neutral-700">
+                <h3 class="font-semibold">
+                  {{ type.name }}
+                  <span class="font-normal text-neutral-500">#{{ type.type_id }}</span>
+                </h3>
+                <div class="mt-3 flex flex-wrap gap-3">
+                  <label [for]="'weight-' + type.type_id" class="flex flex-col gap-1"
+                    >Pondere celule — {{ type.name }}
+                    <input
+                      [id]="'weight-' + type.type_id"
+                      type="number"
+                      class="form-input w-32"
+                      min="0"
+                      max="100"
+                      step="any"
+                      [value]="type.cell_weight"
+                      (input)="changeTypeSetting(type.type_id, 'cell_weight', $event)"
+                    />
+                  </label>
+                  <label [for]="'agents-' + type.type_id" class="flex flex-col gap-1"
+                    >Număr agenți — {{ type.name }}
+                    <input
+                      [id]="'agents-' + type.type_id"
+                      type="number"
+                      class="form-input w-32"
+                      min="0"
+                      step="1"
+                      [value]="type.agent_count"
+                      (input)="changeTypeSetting(type.type_id, 'agent_count', $event)"
+                    />
+                  </label>
+                  @if ((type.agent_count ?? 0) > 0) {
+                    <label [for]="'terrain-' + type.type_id" class="flex flex-col gap-1"
+                      >Teren pentru agenți — {{ type.name }}
+                      <select
+                        [id]="'terrain-' + type.type_id"
+                        class="form-input"
+                        (change)="changeTypeSetting(type.type_id, 'agent_cell_type', $event)"
+                      >
+                        <option value="" [selected]="type.agent_cell_type === null">
+                          Orice tip de celulă
+                        </option>
+                        @for (terrain of initialTypes(); track terrain.type_id) {
+                          <option
+                            [value]="terrain.type_id"
+                            [selected]="type.agent_cell_type === terrain.type_id"
+                          >
+                            {{ terrain.name }}
+                          </option>
+                        }
+                      </select>
+                    </label>
+                  }
+                </div>
+                @for (
+                  property of type.properties;
+                  track property.name;
+                  let propertyIndex = $index
+                ) {
+                  <div class="mt-3">
+                    <p class="text-xs text-neutral-600 dark:text-neutral-400">
+                      {{ property.name }} ·
+                      {{ property.definition.integer_only ? 'întreg' : 'zecimal' }} · limite
+                      {{ property.definition.min_value }} … {{ property.definition.max_value }}
+                    </p>
+                    <div class="mt-1 flex flex-wrap gap-3">
+                      <label
+                        [for]="'minimum-' + type.type_id + '-' + propertyIndex"
+                        class="flex flex-col gap-1"
+                        >Minim {{ type.name }}.{{ property.name }}
+                        <input
+                          [id]="'minimum-' + type.type_id + '-' + propertyIndex"
+                          type="number"
+                          class="form-input w-36"
+                          [min]="property.definition.min_value"
+                          [max]="property.definition.max_value"
+                          [step]="property.definition.integer_only ? 1 : 'any'"
+                          [value]="property.minimum"
+                          (input)="
+                            changePropertySetting(type.type_id, property.name, 'minimum', $event)
+                          "
+                        />
+                      </label>
+                      <label
+                        [for]="'maximum-' + type.type_id + '-' + propertyIndex"
+                        class="flex flex-col gap-1"
+                        >Maxim {{ type.name }}.{{ property.name }}
+                        <input
+                          [id]="'maximum-' + type.type_id + '-' + propertyIndex"
+                          type="number"
+                          class="form-input w-36"
+                          [min]="property.definition.min_value"
+                          [max]="property.definition.max_value"
+                          [step]="property.definition.integer_only ? 1 : 'any'"
+                          [value]="property.maximum"
+                          (input)="
+                            changePropertySetting(type.type_id, property.name, 'maximum', $event)
+                          "
+                        />
+                      </label>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </fieldset>
+        </details>
+      }
+
+      <div class="mt-5 flex flex-wrap items-center gap-2.5">
+        <span
+          >Grilă: {{ request.initial_world.cells.length }} ×
+          {{ request.initial_world.cells[0].length }}</span
+        >
+        <button
+          type="button"
+          class="button"
+          [disabled]="busy() !== null"
+          [attr.aria-expanded]="editingGrid()"
+          aria-controls="grid-size-options"
+          (click)="editGridSize()"
+        >
+          Schimbă dimensiunea
+        </button>
+      </div>
+      @if (editingGrid()) {
+        <form
+          id="grid-size-options"
+          [formGroup]="gridSize"
+          (ngSubmit)="applyGridSize()"
+          class="mt-4"
+        >
+          <fieldset [disabled]="busy() !== null">
+            <legend class="sr-only">Dimensiunea grilei</legend>
+            <div class="flex flex-wrap gap-3">
+              <label for="grid-rows" class="flex flex-col gap-2"
+                >Rânduri
+                <input
+                  id="grid-rows"
+                  type="number"
+                  class="form-input w-28"
+                  formControlName="rows"
+                  min="1"
+                  max="100000"
+                  step="1"
+                />
+              </label>
+              <label for="grid-columns" class="flex flex-col gap-2"
+                >Coloane
+                <input
+                  id="grid-columns"
+                  type="number"
+                  class="form-input w-28"
+                  formControlName="columns"
+                  min="1"
+                  max="100000"
+                  step="1"
+                />
+              </label>
+            </div>
+            <p class="mt-2 text-xs text-neutral-600 dark:text-neutral-400">
+              În modul din JSON, modelul inițial rămâne în colțul stânga-sus. Celulele noi sunt de
+              tip „{{ newCellType()?.name }}”, cu valorile implicite. La micșorare se decupează
+              celulele din afara grilei; agenții trebuie să rămână în interior. Generarea aleatorie
+              folosește dimensiunea nouă pentru întreaga grilă.
+            </p>
+            <div class="mt-3 flex flex-wrap gap-2.5">
+              <button type="submit" class="button">Aplică dimensiunea</button>
+              <button type="button" class="button" (click)="cancelGridSize()">Renunță</button>
+            </div>
+          </fieldset>
+        </form>
+      }
+    </section>
+  }
+
+  <fieldset
+    [disabled]="busy() !== null || configuration() === null || editingGrid()"
+    class="mt-6 flex flex-wrap gap-2.5"
+  >
+    <legend class="sr-only">Rularea simulării</legend>
+    <button type="button" class="button" (click)="validate()">Validează</button>
+    <button type="button" class="button button-primary" (click)="run()">Pornește</button>
+  </fieldset>
+
+  @if (busy() === 'loading') {
+    <p class="status-message" role="status">Se încarcă configurația…</p>
+  } @else if (busy() === 'validating') {
+    <p class="status-message" role="status">Se validează configurația…</p>
+  } @else if (busy() === 'running') {
+    <p class="status-message" role="status">Se salvează starea inițială…</p>
+  }
+  @if (error()) {
+    <p class="status-message status-error" role="alert">{{ error() }}</p>
+  }
+  @if (message()) {
+    <p class="status-message" role="status">{{ message() }}</p>
+  }
+</div>

@@ -1,0 +1,86 @@
+@import 'tailwindcss';
+
+@layer base {
+  :root {
+    color-scheme: light dark;
+    --world-empty: light-dark(#f4f4f4, #282828);
+    --world-filled: light-dark(#373737, #dedede);
+    --world-type-2: light-dark(#999999, #777777);
+    --world-type-3: light-dark(#cccccc, #aaaaaa);
+    --world-type-4: light-dark(#666666, #555555);
+  }
+
+  body {
+    @apply bg-white text-sm leading-relaxed text-neutral-800 dark:bg-[#202020] dark:text-neutral-200;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+
+  :is(a, button, input, select, summary):focus-visible {
+    @apply outline-2 outline-offset-2 outline-blue-700 dark:outline-blue-300;
+  }
+
+  button:not(:disabled),
+  summary {
+    @apply cursor-pointer;
+  }
+
+  button:disabled {
+    @apply cursor-default opacity-45;
+  }
+}
+
+@layer components {
+  .button {
+    @apply inline-flex min-h-9 items-center justify-center gap-2 rounded-[3px] border border-neutral-300 bg-neutral-100 px-3 py-1.5 text-sm text-neutral-800 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-200;
+  }
+
+  .button-primary {
+    @apply border-blue-700 bg-blue-700 text-white dark:border-blue-200 dark:bg-blue-200 dark:text-blue-950;
+  }
+
+  .form-input {
+    @apply min-h-9 min-w-0 rounded-[3px] border border-neutral-300 bg-white px-2 py-1.5 text-sm text-neutral-800 dark:border-neutral-600 dark:bg-[#202020] dark:text-neutral-200;
+  }
+
+  .text-link {
+    @apply text-blue-800 underline underline-offset-2 dark:text-blue-200;
+  }
+
+  .data-table {
+    @apply w-full border-collapse text-left text-sm;
+  }
+
+  .data-table th,
+  .data-table td {
+    @apply border-b border-neutral-300 py-3 pr-4 align-top dark:border-neutral-700;
+  }
+
+  .data-table th {
+    @apply font-semibold;
+  }
+
+  .data-table th:last-child,
+  .data-table td:last-child {
+    @apply pr-0;
+  }
+
+  .status-message {
+    @apply mt-3 text-sm text-neutral-600 dark:text-neutral-400;
+  }
+
+  .status-error {
+    @apply text-red-700 dark:text-red-300;
+  }
+
+  .json-output {
+    @apply mt-3 whitespace-pre-wrap break-all font-mono text-xs;
+  }
+
+  .world-cell {
+    @apply relative block aspect-square min-h-0 min-w-0 w-full p-0;
+  }
+
+  .world-cell[aria-pressed='true'] {
+    @apply outline-2 -outline-offset-2 outline-blue-700 dark:outline-blue-300;
+  }
+}

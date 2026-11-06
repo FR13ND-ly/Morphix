@@ -1,8 +1,8 @@
 use axum::{
     Json, Router,
     extract::{
-        DefaultBodyLimit, Path, State,
-        rejection::{JsonRejection, PathRejection},
+        DefaultBodyLimit, Path, Query, State,
+        rejection::{JsonRejection, PathRejection, QueryRejection},
     },
     http::StatusCode,
     routing::{get, post},
@@ -11,23 +11,46 @@ use axum::{
 use crate::{
     config::state::AppState,
     models::simulation::{
-        ErrorResponse, SimulationGeneration, SimulationRequest, SimulationResponse,
-        SimulationValidationResponse, StoredSimulation,
+        ErrorResponse, SimulationGeneration, SimulationListQuery, SimulationListResponse,
+        SimulationRequest, SimulationResponse, SimulationStepRequest, SimulationValidationResponse,
+        StoredSimulation,
     },
     simulation_store, simulator,
 };
 
 pub fn router() -> Router<AppState> {
     Router::new()
+        .route("/simulations", get(list_simulations))
         .route("/simulations/validate", post(validate_simulation))
         .route("/simulations/run", post(run_simulation))
         .route("/simulations/examples/{name}", get(get_example))
-        .route("/simulations/{id}", get(get_simulation))
+        .route(
+            "/simulations/{id}",
+            get(get_simulation).delete(delete_simulation),
+        )
+        .route("/simulations/{id}/step", post(step_simulation))
         .route(
             "/simulations/{id}/generations/{generation}",
             get(get_generation),
         )
         .layer(DefaultBodyLimit::max(256 * 1024))
+}
+
+async fn list_simulations(
+    State(state): State<AppState>,
+    query: Result<Query<SimulationListQuery>, QueryRejection>,
+) -> Result<Json<SimulationListResponse>, (StatusCode, Json<ErrorResponse>)> {
+    let Query(query) = query.map_err(|error| error_response(error.status(), error.body_text()))?;
+    if query.page == 0 || !(1..=100).contains(&query.page_size) {
+        return Err(error_response(
+            StatusCode::BAD_REQUEST,
+            "page must be at least 1 and page_size must be between 1 and 100".to_owned(),
+        ));
+    }
+    let result = simulation_store::list(&state.db, &query)
+        .await
+        .map_err(storage_error)?;
+    Ok(Json(result))
 }
 
 async fn get_example(
@@ -38,19 +61,6 @@ async fn get_example(
         "forest-fire" => include_str!("../examples/forest-fire.json"),
         "diffusion" => include_str!("../examples/diffusion.json"),
         "artificial-ecosystem" => include_str!("../examples/artificial-ecosystem.json"),
-        "rule-30" => include_str!("../examples/rule-30.json"),
-        "brians-brain" => include_str!("../examples/brians-brain.json"),
-        "cyclic" => include_str!("../examples/cyclic.json"),
-        "langtons-ant" => include_str!("../examples/langtons-ant.json"),
-        "sandpile" => include_str!("../examples/sandpile.json"),
-        "traffic" => include_str!("../examples/traffic.json"),
-        "predator-prey" => include_str!("../examples/predator-prey.json"),
-        "epidemic" => include_str!("../examples/epidemic.json"),
-        "schelling" => include_str!("../examples/schelling.json"),
-        "voter" => include_str!("../examples/voter.json"),
-        "crystal-growth" => include_str!("../examples/crystal-growth.json"),
-        "falling-sand" => include_str!("../examples/falling-sand.json"),
-        "moving-agents" => include_str!("../examples/moving-agents.json"),
         _ => {
             return Err(error_response(
                 StatusCode::NOT_FOUND,
@@ -104,15 +114,15 @@ async fn run_simulation(
         .validate_limits()
         .map_err(|error| error_response(StatusCode::UNPROCESSABLE_ENTITY, error))?;
 
-    let (request, history) = tokio::task::spawn_blocking(move || {
-        let history = simulator::run(
+    let (request, history, checkpoint) = tokio::task::spawn_blocking(move || {
+        let (history, checkpoint) = simulator::run_with_checkpoint(
             &request.automaton,
             &request.initial_world,
             request.generations,
             request.seed,
             request.save_history,
         )?;
-        Ok::<_, String>((request, history))
+        Ok::<_, String>((request, history, checkpoint))
     })
     .await
     .map_err(|_| {
@@ -123,15 +133,87 @@ async fn run_simulation(
     })?
     .map_err(|error| error_response(StatusCode::UNPROCESSABLE_ENTITY, error))?;
 
-    let id = simulation_store::save(&state.db, &request, &history)
-        .await
-        .map_err(storage_error)?;
+    let id =
+        simulation_store::save_with_checkpoint(&state.db, &request, &history, Some(&checkpoint))
+            .await
+            .map_err(storage_error)?;
 
     Ok(Json(SimulationResponse {
         id,
         seed: request.seed,
         history,
     }))
+}
+
+async fn step_simulation(
+    State(state): State<AppState>,
+    path: Result<Path<i64>, PathRejection>,
+    payload: Result<Json<SimulationStepRequest>, JsonRejection>,
+) -> Result<Json<SimulationGeneration>, (StatusCode, Json<ErrorResponse>)> {
+    let Path(id) = path.map_err(|error| error_response(error.status(), error.body_text()))?;
+    let Json(expected) =
+        payload.map_err(|error| error_response(error.status(), error.body_text()))?;
+    let stored = simulation_store::get_step(&state.db, id)
+        .await
+        .map_err(storage_error)?
+        .ok_or_else(|| error_response(StatusCode::NOT_FOUND, "Simulation not found".to_owned()))?;
+    if stored.current.generation != expected.generation {
+        return Err(step_conflict());
+    }
+    let (mut request, previous_json, next, checkpoint) = tokio::task::spawn_blocking(move || {
+        let request = stored.request;
+        // Older records have no checkpoint: recover it once using their original seed.
+        let checkpoint = match stored.checkpoint {
+            Some(checkpoint) => checkpoint,
+            None => {
+                simulator::run_with_checkpoint(
+                    &request.automaton,
+                    &request.initial_world,
+                    stored.current.generation,
+                    request.seed,
+                    false,
+                )?
+                .1
+            }
+        };
+        let (next, checkpoint) = simulator::continue_step(
+            &request.automaton,
+            &stored.current,
+            request.seed,
+            checkpoint,
+        )?;
+        Ok::<_, String>((request, stored.request_json, next, checkpoint))
+    })
+    .await
+    .map_err(|_| {
+        error_response(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Simulation worker could not complete".to_owned(),
+        )
+    })?
+    .map_err(|error| error_response(StatusCode::UNPROCESSABLE_ENTITY, error))?;
+    request.generations = next.generation;
+    let saved = simulation_store::append_generation(
+        &state.db,
+        id,
+        &previous_json,
+        &request,
+        &next,
+        &checkpoint,
+    )
+    .await
+    .map_err(storage_error)?;
+    if !saved {
+        return Err(step_conflict());
+    }
+    Ok(Json(next))
+}
+
+fn step_conflict() -> (StatusCode, Json<ErrorResponse>) {
+    error_response(
+        StatusCode::CONFLICT,
+        "Simulation has advanced in another request. Reload before continuing.".to_owned(),
+    )
 }
 
 async fn get_simulation(
@@ -144,6 +226,23 @@ async fn get_simulation(
         .map_err(storage_error)?
         .ok_or_else(|| error_response(StatusCode::NOT_FOUND, "Simulation not found".to_owned()))?;
     Ok(Json(simulation))
+}
+
+async fn delete_simulation(
+    State(state): State<AppState>,
+    path: Result<Path<i64>, PathRejection>,
+) -> Result<StatusCode, (StatusCode, Json<ErrorResponse>)> {
+    let Path(id) = path.map_err(|error| error_response(error.status(), error.body_text()))?;
+    let deleted = simulation_store::delete(&state.db, id)
+        .await
+        .map_err(storage_error)?;
+    if !deleted {
+        return Err(error_response(
+            StatusCode::NOT_FOUND,
+            "Simulation not found".to_owned(),
+        ));
+    }
+    Ok(StatusCode::NO_CONTENT)
 }
 
 async fn get_generation(

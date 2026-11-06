@@ -1,0 +1,158 @@
+<div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+  <h1 class="text-[22px] font-semibold">Simulări</h1>
+  <a routerLink="/simulations/new" class="button button-primary">+ Simulare nouă</a>
+</div>
+
+<form
+  [formGroup]="filters"
+  (ngSubmit)="applyFilters()"
+  class="mb-5 flex flex-wrap items-center justify-between gap-4"
+>
+  <label class="flex flex-wrap items-center gap-2 text-neutral-600 dark:text-neutral-400">
+    Caută
+    <input
+      type="search"
+      class="form-input w-60 max-w-full"
+      formControlName="search"
+      aria-label="Caută după nume"
+    />
+  </label>
+  <label class="flex flex-wrap items-center gap-2 text-neutral-600 dark:text-neutral-400">
+    Ordine
+    <select
+      class="form-input max-w-full"
+      [value]="filters.controls.sort.value + ':' + filters.controls.order.value"
+      (change)="changeOrdering($event)"
+    >
+      @for (item of orderings; track item.sort + ':' + item.order) {
+        <option [value]="item.sort + ':' + item.order">{{ item.label }}</option>
+      }
+    </select>
+  </label>
+</form>
+
+@if (loading()) {
+  <p class="status-message" role="status">Se încarcă simulările…</p>
+} @else if (error()) {
+  <p class="status-message status-error" role="alert">{{ error() }}</p>
+  <button type="button" class="button mt-3" (click)="reload()">Încearcă din nou</button>
+} @else if (result(); as response) {
+  @if (response.items.length === 0) {
+    <p class="py-5 text-neutral-600 dark:text-neutral-400">Nu există simulări pe această pagină.</p>
+  } @else {
+    <div class="relative overflow-x-auto">
+      <table class="data-table min-w-[560px]">
+        <caption class="sr-only">
+          Simulări salvate în baza de date
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Nume</th>
+            <th scope="col">Creată la</th>
+            <th scope="col">Grilă</th>
+            <th scope="col">Generații</th>
+            <th scope="col"><span class="sr-only">Acțiuni</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (simulation of response.items; track simulation.id) {
+            <tr>
+              <td>{{ simulation.name }}</td>
+              <td class="whitespace-nowrap tabular-nums">
+                {{ simulation.created_at | date: 'dd.MM, HH:mm' }}
+              </td>
+              <td class="whitespace-nowrap tabular-nums">
+                {{ simulation.height }} × {{ simulation.width }}
+              </td>
+              <td class="tabular-nums">{{ simulation.generations }}</td>
+              <td class="text-right">
+                <div class="flex items-center justify-end gap-3">
+                  <a class="text-link" [routerLink]="['/simulations', simulation.id]">Deschide</a>
+                  <button
+                    type="button"
+                    class="text-red-700 underline underline-offset-2 dark:text-red-300"
+                    [disabled]="deleting()"
+                    [attr.aria-label]="
+                      'Șterge simularea ' + simulation.name + ' (#' + simulation.id + ')'
+                    "
+                    (click)="askDelete(simulation)"
+                  >
+                    Șterge
+                  </button>
+                </div>
+              </td>
+            </tr>
+            @if (pendingDelete()?.id === simulation.id) {
+              <tr>
+                <td colspan="5">
+                  <div
+                    role="group"
+                    [attr.aria-label]="'Confirmă ștergerea simulării #' + simulation.id"
+                  >
+                    <p>Ștergi simularea „{{ simulation.name }}” și toate generațiile ei salvate?</p>
+                    <div class="mt-3 flex flex-wrap gap-2.5">
+                      <button
+                        type="button"
+                        class="button border-red-700 bg-red-700 text-white dark:border-red-300 dark:bg-red-300 dark:text-red-950"
+                        [disabled]="deleting()"
+                        (click)="confirmDelete()"
+                      >
+                        {{ deleting() ? 'Se șterge…' : 'Șterge definitiv' }}
+                      </button>
+                      <button
+                        type="button"
+                        class="button"
+                        [disabled]="deleting()"
+                        (click)="cancelDelete()"
+                      >
+                        Renunță
+                      </button>
+                    </div>
+                    @if (deleteError()) {
+                      <p role="alert" class="status-message status-error">{{ deleteError() }}</p>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+  <div
+    class="mt-5 flex flex-wrap items-center justify-between gap-4 text-sm text-neutral-600 dark:text-neutral-400"
+  >
+    <span>{{ response.total }} {{ response.total === 1 ? 'simulare' : 'simulări' }}</span>
+    <div class="flex flex-wrap items-center gap-5">
+      <label class="flex items-center gap-2">
+        Pe pagină
+        <select
+          class="form-input"
+          [formControl]="filters.controls.page_size"
+          (change)="applyFilters()"
+        >
+          @if (![10, 20, 50, 100].includes(query().page_size)) {
+            <option [ngValue]="query().page_size">{{ query().page_size }}</option>
+          }
+          @for (size of [10, 20, 50, 100]; track size) {
+            <option [ngValue]="size">{{ size }}</option>
+          }
+        </select>
+      </label>
+      <nav aria-label="Paginarea simulărilor" class="flex items-center gap-4">
+        <button type="button" [disabled]="query().page <= 1" (click)="changePage(query().page - 1)">
+          ← Înapoi
+        </button>
+        <span aria-label="Pagina curentă">{{ query().page }}</span>
+        <button
+          type="button"
+          [disabled]="query().page * query().page_size >= response.total"
+          (click)="changePage(query().page + 1)"
+        >
+          Înainte →
+        </button>
+      </nav>
+    </div>
+  </div>
+}

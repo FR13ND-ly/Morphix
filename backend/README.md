@@ -1,4 +1,4 @@
-# Backend CelLab
+# Backend morphix
 
 Din directorul `backend`, pornește serverul cu `cargo run`. Adresa implicită este
 `http://127.0.0.1:3000`; configurația se citește din variabilele de mediu și `.env`.
@@ -7,8 +7,7 @@ Din directorul `backend`, pornește serverul cu `cargo run`. Adresa implicită e
 
 - `codex/advanced-simulator` păstrează versiunea completă dinaintea simplificării,
   în commit-ul `212a45b`.
-- `main` păstrează aceleași configurații JSON, modele și endpoint-uri, cu un flux
-  intern mai ușor de urmărit.
+- `main` folosește un flux intern mai ușor de urmărit și patru exemple temporare.
 
 Pe `main`, intenția de mișcare are un singur câmp, `Option<Movement>`, cu variantele
 `Offset`, `FreeCell` și `RemovedNeighbor`. Simulatorul păstrează agentul, rezultatul
@@ -24,7 +23,7 @@ Funcțiile publice `read()`, `apply_rules()` și `apply_actions()` își păstre
 verificările de intrare pentru utilizarea lor independentă.
 
 Alegerea celulelor libere, pregătirea nașterilor și verificarea limitelor
-istoricului sunt scrise cu bucle și condiții explicite. Cele 335 de teste existente
+istoricului sunt scrise cu bucle și condiții explicite. Testele existente
 verifică în continuare comportamentul și contractul JSON.
 
 Numărarea vecinilor și citirea generațiilor din SQLite folosesc de asemenea bucle
@@ -36,72 +35,38 @@ Pentru compararea implementărilor, din rădăcina proiectului:
 git diff codex/advanced-simulator..main -- backend/src
 ```
 
-## Stadiul simulatorului și catalogul de modele
+## Exemple temporare
 
-Motorul execută configurații pentru toate cele 15 familii din enunț. Tabelul
-precizează variantele concrete incluse; parametrii și regulile se află în JSON.
-Toate folosesc același evaluator de condiții, expresii și acțiuni.
+Backendul expune aceleași patru exemple ca formularul de creare:
 
-| Familie din enunț | Fișier din `examples/` | Varianta inclusă |
-| --- | --- | --- |
-| Automat elementar | `rule-30.json` | Rule 30, un rând, margine fixă |
-| Brian's Brain | `brians-brain.json` | OFF → FIRING la doi vecini FIRING; FIRING → DYING → OFF |
-| Automat ciclic | `cyclic.json` | Patru faze; minimum doi vecini în faza următoare; margine circulară |
-| Langton's Ant | `langtons-ant.json` | Direcție 0–3, rotire, schimbarea terenului și deplasare; grilă circulară finită |
-| Forest Fire | `forest-fire.json` | Propagare locală; regenerare cu p = 0.04 și aprindere spontană cu p = 0.01 |
-| Sandpile | `sandpile.json` | Fiecare celulă cu minimum patru granule cedează o granulă în fiecare direcție cardinală, o dată pe pas; margine deschisă |
-| Traffic | `traffic.json` | Mașini pe un drum circular; viteză de o celulă; verificarea ocupării la începutul pasului |
-| Predator–Prey | `predator-prey.json` | Captură, intrare în poziția prăzii, energie și moarte; fără reproducere în acest exemplu |
-| Epidemic | `epidemic.json` | SIR; probabilitate de infectare `1 - 0.75^n`; recuperare la al treilea pas al infecției; fără reinfectare |
-| Schelling | `schelling.json` | Prag de satisfacție 40%; mutare aleatorie către orice loc liber; agenții izolați rămân pe loc |
-| Voter | `voter.json` | Majoritate locală; egalitatea păstrează opinia |
-| Crystal Growth | `crystal-growth.json` | Creștere la exact un vecin cristal |
-| Diffusion | `diffusion.json` | Media celulei și a celor patru vecini; valori zecimale |
-| Falling Sand | `falling-sand.json` | Particule de nisip și apă ca agenți; rocă în teren; priorități de deplasare pe tip |
-| Artificial Ecosystem | `artificial-ecosystem.json` | Regenerarea ierbii, hrănire, captură, reproducere și moarte |
+| Fișier din `examples/` | Ce verifică |
+| --- | --- |
+| `game-of-life.json` | Celule cu stări discrete |
+| `forest-fire.json` | Reguli probabilistice |
+| `diffusion.json` | Proprietăți numerice cu valori zecimale |
+| `artificial-ecosystem.json` | Agenți mobili, energie, captură și reproducere |
 
-În plus, `game-of-life.json` și `moving-agents.json` rămân exemple simple pentru
-celule discrete și conflicte de deplasare. Sunt 17 cereri complete, trimise aceluiași
-endpoint `POST /simulations/run`. De exemplu, din `backend`, cu serverul pornit:
+Toate folosesc același evaluator de condiții, expresii și acțiuni. Alegerea unui
+exemplu este temporară: serviciul AI va genera ulterior definiția automatului și
+lumea inițială pornind de la un prompt.
 
-```powershell
-$result = Invoke-RestMethod -Method Post `
-    -Uri 'http://127.0.0.1:3000/simulations/run' `
-    -ContentType 'application/json' `
-    -Body (Get-Content -Raw examples/sandpile.json)
-$result.history
-```
-
-Fiecare pas reprezintă o actualizare sincronă. Pentru Sandpile, un pas este o rundă
-de prăbușiri simultane; numărul de pași este ales de utilizator. Simulatorul nu
-rulează automat până la stabilizare. Într-o grilă circulară cu prea multe granule,
-stabilizarea poate fi imposibilă. Marginile fixe absorb contribuțiile trimise în
-exterior; marginea din acest model reprezintă astfel un rezervor de evacuare.
-
-Modelul de trafic inclus are viteză unitară. Extensia cu viteze 0–5 și frânare
-aleatorie rămâne o variantă suplimentară, pentru care trebuie definite regulile și
-observarea direcțională a agenților. Particulele folosesc regula de
-conflict comună tuturor agenților: cererile simultane spre aceeași poziție se
-anulează. Apa nu schimbă locul cu nisipul; acest exemplu nu modelează densități.
-Langton's Ant rulează pe grila finită circulară, iar Schelling este actualizat
-sincron. Aceste alegeri fac parte din variantele declarate.
-
-`tests/catalog.rs` verifică fiecare fișier: validare, rulare, reproducerea istoricului
-prin seed, același rezultat final cu/fără istoric și salvare/recuperare prin API și
-SQLite. Același fișier verifică tranziții de referință pentru modelele noi.
-`tests/transfers.rs` verifică separat acumularea contribuțiilor, conservarea în
-grile închise, pierderile la margine și erorile de configurare sau de valori.
-Pentru a verifica backend-ul: `cargo test --locked`.
-
-Simulatorul este încheiat pentru aceste variante. Interpretarea limbajului natural,
-generarea lumii inițiale, analiza rezultatelor prin modelul AI și interfața grafică
-rămân componente separate ale aplicației.
+`tests/catalog.rs` verifică aceste patru configurații. `tests/common/mod.rs`
+conține date compacte folosite exclusiv de teste pentru mecanismele motorului,
+precum deplasarea, captura și transferul numeric între celule.
 
 ## Endpoint-uri
 
 - `GET /health`: verifică legătura cu baza de date; răspunde cu `ok` sau HTTP 503.
+- `GET /simulations`: listează simulările fără configurații și istorice complete.
+  Parametri: `page` (implicit 1), `page_size` (implicit 20, maximum 100), `search`
+  (fragment literal din nume), `sort` (`created_at`, `name`, `generations`) și
+  `order` (`asc`, `desc`; implicit `desc`). Răspunsul conține `items`, `total`,
+  `page`, `page_size`. Fiecare element are `id`, `name`, `created_at`, `width`,
+  `height`, `generations`, `save_history`. Paginile în afara rezultatelor sunt
+  goale; parametrii invalizi primesc HTTP 400 cu un mesaj JSON. Căutarea și
+  sortarea după nume ignoră diferențele de majuscule ASCII.
 - `GET /simulations/examples/{name}`: întoarce configurația completă a unui exemplu,
-  de exemplu `game-of-life`, `diffusion` sau `sandpile`. Numele necunoscute produc
+  de exemplu `game-of-life`, `diffusion` sau `forest-fire`. Numele necunoscute produc
   HTTP 404. Frontend-ul folosește fișierele originale prin acest endpoint.
 - `POST /simulations/validate`: verifică o cerere înainte de rulare și răspunde cu
   `{ "valid": true }`. Nu calculează generații și nu salvează în SQLite.
@@ -110,11 +75,44 @@ rămân componente separate ale aplicației.
   `{ "id": 1, "seed": 42, "history": [{ "generation": 0, "world": ... }, ...] }`.
 - `GET /simulations/{id}`: recuperează simularea salvată, cu `id`, `created_at`,
   `request` (configurația completă) și `history` (generațiile păstrate).
+- `DELETE /simulations/{id}`: șterge simularea și întoarce HTTP 204 fără corp.
+  Cheile străine SQLite elimină atomic generațiile și checkpoint-ul asociat.
+  Un ID inexistent primește 404, un ID incorect formatat primește 400, iar o eroare
+  de stocare primește 500 cu mesaj JSON. Un pas calculat înainte de ștergere nu
+  poate recrea înregistrarea, deoarece salvarea lui necesită simularea existentă.
 - `GET /simulations/{id}/generations/{generation}`: recuperează o generație salvată,
   în forma `{ "generation": 1, "world": ... }`.
+- `POST /simulations/{id}/step`: primește `{ "generation": 6 }`, numărul ultimei
+  generații cunoscute, și calculează o singură generație nouă. Răspunsul este
+  `{ "generation": 7, "world": ... }`. Salvează rezultatul și actualizează numărul
+  generațiilor din lista simulărilor. O cerere pornită de la o generație depășită
+  primește HTTP 409; un ID inexistent primește 404.
+
+Frontendul creează o simulare cu `generations: 0` și `save_history: true`, apoi
+apelează `/step` la fiecare avansare dincolo de istoricul calculat. Acest flux nu
+are limita cumulativă de 1.000 de generații sau de 100.000 de unități de istoric:
+limita de stare/proprietăți se aplică unei singure lumi, iar istoricul rămâne în SQLite.
+Vechiul `/run` păstrează limitele unui lot calculat și returnat într-o singură cerere.
+
+Tabela `simulation_checkpoints`, creată la pornire prin scriptul existent,
+păstrează poziția generatorului aleatoriu și ultimul ID de agent alocat.
+`ChaCha12Rng` este algoritmul folosit de `StdRng` din versiunea curentă de `rand`;
+este folosit direct pentru a-i putea salva și restaura poziția. Pașii separați
+reproduc aceeași evoluție ca rularea continuă, inclusiv după repornirea serverului.
+Pentru simulările vechi, fără checkpoint, acesta este recuperat o singură dată
+prin reluarea configurației originale, cu același seed, fără acumularea istoricului.
+
+Un pas citește doar ultima lume și checkpoint-ul, apoi execută calculul în
+`spawn_blocking`. Noua lume, checkpoint-ul și numărul generației sunt scrise
+într-o singură tranzacție. Dacă un alt apel a avansat deja simularea, actualizarea
+este refuzată; dacă regulile sau salvarea eșuează, starea anterioară rămâne intactă.
+Simulările vechi cu `save_history: false` păstrează în continuare numai ultima lume.
 
 Fiecare element din `history` conține numărul generației în `generation` și lumea
 completă în `world`, inclusiv celulele și agenții.
+
+Citirea JSON folosește opțiunea `float_roundtrip` din `serde_json`, astfel încât
+valorile zecimale `f64` din istoric să fie recuperate exact după salvarea în SQLite.
 
 - `save_history: true` (implicit dacă lipsește): pentru N pași sunt returnate N + 1
   stări, numerotate de la 0 la N. `history[0].world` este lumea inițială.
@@ -178,7 +176,7 @@ $result = Invoke-RestMethod -Method Post `
 `SimulationValidationResponse` se află în `src/models/simulation.rs` și definește
 doar răspunsul de succes. Erorile folosesc `ErrorResponse`, deja utilizat de API.
 `tests/api.rs` verifică validarea, erorile, absența scrierilor în SQLite și absența
-execuției regulilor. `tests/catalog.rs` trimite toate cele 17 configurații la
+execuției regulilor. `tests/catalog.rs` trimite cele patru configurații la
 validare înainte să le ruleze și să le recupereze din SQLite.
 
 ## Salvarea și recuperarea simulărilor
@@ -242,45 +240,6 @@ Condițiile și expresiile care au argumente folosesc și `args`, de exemplu
 `{ "kind": "constant", "args": 3 }` sau
 `{ "kind": "add", "args": [{ "kind": "property", "args": "energy" }, { "kind": "constant", "args": 1 }] }`.
 Ținta unei reguli este `"cell"` sau `"agent"`. Câmpurile necunoscute sunt respinse.
-
-## Exemplu Rule 30
-
-`examples/rule-30.json` este o cerere completă pentru Rule 30, descrisă folosind
-aceleași tipuri, condiții și acțiuni ca restul modelelor. Fiecare generație are o
-grilă de 1 × 11 celule. Evoluția în timp este păstrată în `history`.
-
-Regula citește vecinul din stânga, celula curentă și vecinul din dreapta. Tabelul
-de tranziție este cel din [definiția Rule 30 — Wolfram MathWorld](https://mathworld.wolfram.com/Rule30.html):
-
-```text
-stânga–centru–dreapta: 111 110 101 100 011 010 001 000
-noua stare centrală:    0   0   0   1   1   1   1   0
-```
-
-Prima regulă din JSON setează tipul 1 pentru combinațiile `100`, `011`, `010` și
-`001`. Acestea sunt exprimate prin `All` și `Any`. A doua regulă are condiția
-`Always` și setează tipul 0 pentru cazurile rămase. Probabilitatea este 1.
-Motorul folosește prima regulă potrivită, fără o ramură Rust specială pentru Rule 30.
-
-Vecinătatea este `[[0, -1], [0, 1]]`, iar marginea fixă are tipul 0. Dintr-o singură
-celulă vie în centru, exemplul produce:
-
-```text
-0: 00000100000
-1: 00001110000
-2: 00011001000
-3: 00110111100
-4: 01100100010
-```
-
-```powershell
-$result = Invoke-RestMethod -Method Post `
-    -Uri 'http://127.0.0.1:3000/simulations/run' `
-    -ContentType 'application/json' `
-    -Body (Get-Content -Raw examples/rule-30.json)
-
-$result.history[4].world.cells[0]
-```
 
 ## Exemplu de difuzie
 
@@ -794,10 +753,6 @@ eliminare, `spawn` conține eventuala cerere de creare a unui agent, iar
 Acest rezultat este temporar; nu este un câmp
 salvat în `ObjectState`, `Agent` sau în JSON-ul lumii.
 
-`examples/moving-agents.json` este o cerere completă pentru același endpoint. Agenții
-pornesc din coloanele 0 și 4, ajung în 1 și 3, apoi rămân acolo fiindcă amândoi cer
-coloana 2. Se poate trimite folosind comanda de mai sus, cu acest fișier în `-Body`.
-
 ### Alegerea unui vecin liber
 
 `MoveToFreeNeighbor` alege o destinație din vecinătatea configurată, fără a calcula
@@ -861,19 +816,6 @@ probabilistice ulterioare, deoarece acestea folosesc aceeași secvență aleatoa
 pentru zero pași sau reguli neexecutate. Combinarea cu orice altă acțiune de
 deplasare în aceeași regulă este respinsă chiar dacă nu există destinații.
 O vecinătate goală este validă și produce o deplasare fără destinație.
-
-Pentru a încerca această acțiune cu exemplul existent, fără un fișier nou:
-
-```powershell
-$request = Get-Content -Raw examples/moving-agents.json | ConvertFrom-Json
-$request.automaton.rules[0].actions = @(
-    @{ kind = 'move_to_free_neighbor'; selection = 'random'; cell_type = 0 }
-)
-$result = Invoke-RestMethod -Method Post `
-    -Uri 'http://127.0.0.1:3000/simulations/run' `
-    -ContentType 'application/json' `
-    -Body ($request | ConvertTo-Json -Depth 64)
-```
 
 ### Alegerea unui loc liber din întreaga grilă
 
@@ -1014,27 +956,6 @@ existentă și nu anulează captura ori recompensa.
 fără a modifica direct lumea. `ActionResult::unchanged()` construiește un rezultat
 fără efecte, folosit când nu există țintă sau captura este anulată.
 `src/simulator.rs` rezolvă cererile înainte să aplice efectele supraviețuitorilor.
-
-### Exemplu minim prădător–pradă
-
-`examples/predator-prey.json` definește terenul de tip 0, prada de tip 1 și prădătorul
-de tip 2. Prădătorul are energie între 0 și 100. La captură reușită primește 10 energie
-și cere deplasarea în poziția prăzii prin `move_to_removed_neighbor`.
-Când nu observă pradă, consumă o unitate și caută o poziție liberă. La energie zero se elimină la
-pasul următor. Prada se deplasează aleatoriu. Bonusul energetic este definit prin
-regula JSON; motorul nu are un comportament special pentru prădători.
-
-Acesta este un model minim pentru captură, deplasare și consum de energie; exemplul
-nu introduce reproducere sau regenerare de hrană. Regulile pot fi extinse separat.
-
-```powershell
-$result = Invoke-RestMethod -Method Post `
-    -Uri 'http://127.0.0.1:3000/simulations/run' `
-    -ContentType 'application/json' `
-    -Body (Get-Content -Raw examples/predator-prey.json)
-
-$result.history[1].world.agents
-```
 
 ### Deplasarea în poziția țintei capturate
 
@@ -1207,12 +1128,13 @@ Erorile endpoint-ului de simulare au forma `{ "error": "mesaj" }`:
   Detaliile erorilor de stocare sunt scrise în consola serverului; răspunsul HTTP
   conține un mesaj general.
 
-Prima versiune permite maximum 1.000 de pași, 64 de reguli, 32 de offset-uri și
+Calculul unui lot prin `/run` permite maximum 1.000 de pași. Calculul prin `/step`
+nu are acest plafon cumulativ. Definiția permite 64 de reguli, 32 de offset-uri și
 512 noduri în total pentru condiții, acțiuni și expresii (inclusiv probabilitățile),
 cu adâncime maximum 16.
 Numele proprietăților au maximum 64 de octeți.
 
-Istoricul poate avea maximum 100.000 de unități. Cu `save_history: true`, înaintea
+Istoricul unui lot `/run` poate avea maximum 100.000 de unități. Cu `save_history: true`, înaintea
 rulării se verifică estimarea:
 
 ```text
@@ -1237,7 +1159,8 @@ Cu `save_history: false`, estimarea inițială folosește o singură generație:
 
 La execuție, aceeași limită se aplică separat fiecărei lumi calculate, inclusiv
 generațiilor intermediare și agenților nou-creați. Unitățile generațiilor eliminate
-nu se adună. Limita de 1.000 de pași și toate validările regulilor rămân active.
+nu se adună. Limita de 1.000 de pași se aplică numai loturilor `/run`.
+La `/step`, bugetul verifică doar noua lume, iar generațiile precedente rămân în SQLite.
 
 Limita include și tipurile în care obiectele se pot transforma. Limitele
 sunt definite în `src/models/simulation.rs`; dimensiunea cererii este în `src/api.rs`.
